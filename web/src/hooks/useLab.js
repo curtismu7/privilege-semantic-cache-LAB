@@ -38,12 +38,13 @@ export default function useLab() {
 
   // Rule 19: the server decides. A 409 (Real not available) is shown as the server worded it; nothing else changes.
   const switchMode = useCallback(async (source) => {
+    if (source === info?.source) return { ok: true }; // pressing the mode that is already active changes nothing: no request, no reload, the last run stays
     const r = await setMode(source);
     if (!r.ok) { setModeError(r.body?.message || `The mode did not change (HTTP ${r.status})`); return { ok: false, message: r.body?.message }; }
     setModeError(null); setLast(null); setObs(null); setEpoch((n) => n + 1);
     await load(vertical);
     return { ok: true };
-  }, [load, vertical]);
+  }, [load, vertical, info]);
 
   const refreshObs = useCallback(async () => {
     const r = await getObservability();

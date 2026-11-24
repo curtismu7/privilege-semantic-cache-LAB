@@ -196,3 +196,11 @@ test('same-origin writes: a cross-origin Origin or a cross-site fetch is 403, on
     assert.equal((await send2(p, body, { 'sec-fetch-site': 'same-origin' })).status, 200);
   }
 });
+
+test('Express client errors keep their 4xx: a malformed percent-escape in a path is a 400 bad_request, never a 500', async () => {
+  for (const p of ['/api/scenario/%E0%A4%A']) {
+    const r = await post(p, {});
+    assert.equal(r.status, 400, p);
+    assert.deepEqual(await r.json(), { error: 'bad_request', message: 'the request could not be read' });
+  }
+});

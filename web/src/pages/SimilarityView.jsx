@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { postSimilarity } from "../api";
 import { Card } from "../components/Bits.jsx";
 import ScoreBar from "../components/ScoreBar.jsx";
@@ -19,9 +19,12 @@ export default function SimilarityView({ embeddingModel, strictness, setStrictne
   const [score, setScore] = useState(undefined); // undefined = not scored yet
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const latest = useRef(0); // only the newest request may change the page: a slow older answer is dropped
   const ask = useCallback(async (x = a, y = b) => {
+    const mine = ++latest.current;
     setBusy(true); setError(null);
     const r = await postSimilarity(x, y, embeddingModel);
+    if (mine !== latest.current) return;
     setBusy(false);
     if (!r.ok) { setError(r.body?.message || `HTTP ${r.status}`); setScore(undefined); return; }
     setScore(r.body.similarity);

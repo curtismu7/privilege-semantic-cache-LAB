@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { fireEvent } from "@testing-library/react";
 import { BANNER } from "../../../server/src/banner.js";
 import { validateConfig } from "../../../server/src/customer.js";
@@ -43,12 +43,40 @@ describe("shell: banner, mode toggle, presenter, talk track, reset", () => {
     expect(posts.map((c) => c.body)).toEqual([{ source: "real" }]);
   });
 
-  it("Mock switches back and all data is loaded again", async () => {
+  it("pressing the Mock button that is already active changes nothing: no request, no reload, the last run stays", async () => {
     const user = await h.mount();
-    const before = h.lab.calls.filter((c) => c.path === "/api/info").length;
+    await user.click(await screen.findByTestId("scenario-exact-repeat-hits"));
+    await screen.findByTestId("verdict");
+    const calls = h.lab.calls.length;
     await user.click(screen.getByTestId("mode-mock"));
-    await waitFor(() => expect(h.lab.calls.filter((c) => c.path === "/api/info").length).toBeGreaterThan(before));
-    expect(h.lab.calls.some((c) => c.path === "/api/mode" && c.body?.source === "mock")).toBe(true);
+    expect(h.lab.calls.length).toBe(calls);
+    expect(h.lab.calls.some((c) => c.path === "/api/mode")).toBe(false);
+    expect(screen.getByTestId("verdict")).toBeInTheDocument();
+    expect(window.location.hash).toBe("#cache/exact-repeat-hits");
+  });
+
+  it("a vertical change and a mode switch leave only the page in the address, so the remount does not run the scenario again", async () => {
+    const user = await h.mount();
+    await user.click(await screen.findByTestId("scenario-exact-repeat-hits"));
+    await screen.findByTestId("verdict");
+    expect(window.location.hash).toBe("#cache/exact-repeat-hits");
+    await user.selectOptions(screen.getByTestId("vertical-select"), "finance");
+    expect(window.location.hash).toBe("#cache");
+    await new Promise((r) => setTimeout(r, 400));
+    const runs = h.lab.calls.filter((c) => c.path.startsWith("/api/scenario/")).length;
+    expect(runs).toBe(1);
+  });
+
+  it("presenter mode on the Cache page shows the talk-track section of the scenario that is on screen", async () => {
+    const user = await h.mount();
+    await user.click(await screen.findByTestId("presenter"));
+    expect(screen.getByTestId("presenter-say")).toHaveTextContent(/only claims taken from the 2026-11-21 release notes/);
+    await user.click(screen.getByTestId("presenter")); // leave presenter, run a scenario, come back
+    await user.click(await screen.findByTestId("scenario-ttl-expiry-misses"));
+    await screen.findByTestId("verdict");
+    await user.click(screen.getByTestId("presenter"));
+    expect(screen.getByTestId("presenter-say")).toHaveTextContent(/Run the fifth scenario/);
+    expect(screen.getByTestId("presenter-say")).not.toHaveTextContent(/only claims taken from/);
   });
 
   it("names a server that is down instead of a blank page, and offers a retry", async () => {
@@ -135,6 +163,19 @@ describe("shell: banner, mode toggle, presenter, talk track, reset", () => {
     await nav(user, "Stories and talk track");
     expect(screen.getByTestId("talk-general").querySelectorAll("p").length).toBeGreaterThan(4);
     expect(screen.getByTestId("story-say-S01").querySelectorAll("p").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("without window.crypto the workspace id is still random (the fallback fills the bytes in place) and valid", async () => {
+    const { workspaceId, forgetWorkspace, SERVER_PATTERN } = await import("../workspace.js");
+    const real = Object.getOwnPropertyDescriptor(window, "crypto");
+    const rnd = vi.spyOn(Math, "random").mockReturnValue(0.5);
+    try {
+      Object.defineProperty(window, "crypto", { value: undefined, configurable: true });
+      forgetWorkspace();
+      const id = workspaceId();
+      expect(id).toBe("w-8080808080808080");
+      expect(id).toMatch(SERVER_PATTERN);
+    } finally { rnd.mockRestore(); if (real) Object.defineProperty(window, "crypto", real); forgetWorkspace(); }
   });
 
   it("the workspace id the page sends is accepted by the server's own pattern", async () => {

@@ -9,7 +9,8 @@ export function workspaceId() {
   if (memo) return memo;
   try { const saved = window.sessionStorage.getItem(KEY); if (saved && SERVER_PATTERN.test(saved)) return (memo = saved); } catch { /* blocked */ }
   const bytes = new Uint8Array(8);
-  (window.crypto || { getRandomValues: (a) => a.map(() => Math.floor(Math.random() * 256)) }).getRandomValues(bytes);
+  // Without window.crypto the bytes are filled IN PLACE (a typed array's map() returns a new array and would leave these bytes zero).
+  (window.crypto || { getRandomValues: (a) => { for (let i = 0; i < a.length; i += 1) a[i] = Math.floor(Math.random() * 256); return a; } }).getRandomValues(bytes);
   memo = `w-${[...bytes].map((b) => b.toString(16).padStart(2, "0")).join("")}`;
   try { window.sessionStorage.setItem(KEY, memo); } catch { /* blocked */ }
   return memo;

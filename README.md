@@ -19,7 +19,7 @@ npm run build      # builds web/dist, which the server serves
 npm start          # http://127.0.0.1:7847/  (loopback only; the API is under /api)
 npm test           # server (node --test test/*.test.js), web (vitest), scripts (node --test scripts/*.test.mjs)
 npm run doctor     # one check per scenario, kit pin, stories and diagram, netguard, an HTTP pass through the API
-npm run reset      # resets a running lab (the default workspace)
+npm run reset      # resets a running lab: the default workspace, or node scripts/reset.mjs [base-url] [workspace]
 ./scripts/run.sh   # install if needed, build if needed, doctor, start
 ```
 Docker (OrbStack): `HOST_PORT=7847 docker compose up --build -d`, published on `127.0.0.1` only, non-root, read-only, `restart: unless-stopped`, healthcheck on `/api/health`. For branding, copy `customer.config.example.json` to `customer.config.json` beside the compose file and uncomment the volume in `docker-compose.yml` (the container's root file system is read-only); host-run reads it from the repo root.

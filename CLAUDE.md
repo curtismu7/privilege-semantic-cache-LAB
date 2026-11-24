@@ -13,5 +13,19 @@ Demo-tier standalone lab, step 2 (engine, API and web UI). The repo exists (`cur
 - Docker: `docker-compose.yml` publishes `127.0.0.1:7847` only, non-root, read-only, `restart: unless-stopped`; pinned by `scripts/compose.test.mjs`. `customer.config.json` needs the optional bind mount in the compose file.
 - Hostile input is bounded in `bounds.js`. Loopback bind, Host check 421, same-origin JSON writes, netguard with a self-test. Only `.example` and `.invalid` hosts in shipped text.
 - Not built yet: Real mode, the shelf registry entry, proxy route, submodule pin and release (step 3, owner-gated), Story mode.
-- Never-repeat lessons: a worktree basename must be unique (air-test names its remote folder after it); `new URL('./x', import.meta.url)` in a server file the web tests import must go through a variable (Vite rewrites the literal); a missing `/assets` file is a 404, never `index.html`; `.dockerignore` listing `docs` breaks `COPY docs/talk-track.md` (prove Docker changes by building the image); the first story load must send no `vertical` (a default parameter hides customer.config); Reset must clear the scenario from the address hash.
 - No AI attribution in commits or files. The GitHub account is `curtismu7`.
+
+## Never-repeat lessons
+- A worktree basename must be unique (air-test names its remote folder after it).
+- `new URL('./x', import.meta.url)` in a server file the web tests import must go through a variable (Vite rewrites the literal); a missing `/assets` file is a 404, never `index.html`.
+- Dockerfile `COPY` sources must not be excluded by `.dockerignore` (a compose test checks it; only a real OrbStack build proves it).
+- The first story/talk-track load sends no `vertical` (a default parameter would hide customer.config).
+- Reset, a mode switch and a vertical change clear the scenario from the address hash; a page runs a hash scenario only on a deliberate navigation (mount or a changed hash), never on a remount.
+- Presenter code reads the stored run's real field names (`{ kind, id, played, runId, trace }`), and a test runs it with a run present.
+- The workspace-id pattern is the same on client and server, and the random fallback fills the array in place (`Uint8Array.map` returns a new array).
+- Pressing the already-active Mock button changes nothing (no request, no reload).
+- `npm run reset` takes a workspace id (`node scripts/reset.mjs [base-url] [workspace]`, or `PSC_WORKSPACE`).
+- The netguard allows a literal IP in `dns.lookup` (an opted-in bind); connecting to it is still blocked.
+- Shortcut keys ignore modifiers, repeats and focused controls.
+- Static scans skip `.github/` and the shared attribution script.
+- A port is checked against running containers and compose files (`docker ps`; the ap-* labs use 7839 to 7843), not only the registry. This lab's ports are 7800-7999 and `resolvePort` enforces it.

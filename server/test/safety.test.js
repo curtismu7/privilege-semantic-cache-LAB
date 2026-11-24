@@ -13,7 +13,8 @@ test('loopback bind only, unless PSC_BIND is set on purpose', () => {
 test('the provisional port is 7847; PORT is validated and reserved ports refused', () => {
   assert.equal(resolvePort({}), 7847);
   assert.equal(resolvePort({ PORT: '7900' }), 7900);
-  for (const p of ['abc', '12', '99999', '1.5', '8080', '4400', '5173']) assert.throws(() => resolvePort({ PORT: p }), p);
+  assert.equal(resolvePort({ PORT: '7800' }), 7800); assert.equal(resolvePort({ PORT: '7999' }), 7999);
+  for (const p of ['abc', '12', '99999', '1.5', '8080', '4400', '5173', '1024', '7799', '8000', '65535']) assert.throws(() => resolvePort({ PORT: p }), p);
 });
 
 test('loopback and Host parsing', () => {

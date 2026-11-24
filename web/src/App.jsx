@@ -60,9 +60,13 @@ export default function App() {
 
   const pickTheme = (next) => { try { if (next === "auto") localStorage.removeItem(THEME_KEY); else localStorage.setItem(THEME_KEY, next); } catch { /* not remembered */ } setTheme(next); };
   const select = (id) => { setPage(id); try { window.history.replaceState(null, "", `#${id}`); } catch { /* ignore */ } };
+  // A scenario in the address ("#cache/<scenario>") runs when the page is opened that way. Anything that restarts the page (Reset, a mode switch, a
+  // vertical change) leaves only the page in the address, so the remount does not run the scenario again.
+  const clearScenarioHash = () => { try { window.history.replaceState(null, "", `#${page}`); } catch { /* ignore */ } };
+  const switchMode = async (source) => { if (source !== lab.source) clearScenarioHash(); return lab.switchMode(source); };
+  const pickVertical = (v) => { clearScenarioHash(); lab.setVertical(v); };
   const reset = async () => {
-    // A scenario in the address ("#cache/<scenario>") would run again when the page remounts: Reset leaves only the page.
-    try { window.history.replaceState(null, "", `#${page}`); } catch { /* ignore */ }
+    clearScenarioHash();
     const ok = await lab.reset();
     setResetMsg(ok ? "Reset: the key is back to its default config with an empty cache, the lab clock is at zero, every store is back on, the last run is cleared and the diagram is back in place." : "Reset failed on the server; the view was reloaded.");
   };
@@ -70,7 +74,8 @@ export default function App() {
   const { source, story, info } = lab;
   const banner = info?.banner || BANNER_UNKNOWN;
   const View = PAGES.find((p) => p.id === page).View;
-  const sc = lab.last?.scenario ? story?.stories.find((s) => s.scenario === lab.last.scenario.id) : null;
+  // The stored run is { kind, id, played, runId, trace }: a scenario run names its scenario in `id`.
+  const sc = lab.last?.kind === "scenario" ? story?.stories.find((s) => s.scenario === lab.last.id) : null;
   const say = !story ? [] : page === "cache" ? story.talkTrack.filter((x) => x.id === (sc ? sc.id : "before-you-start")) : story.talkTrack.filter((x) => (PRESENTER_TALK[page] || []).includes(x.id));
 
   return (
@@ -85,7 +90,7 @@ export default function App() {
           {PAGES.map((p) => <a key={p.id} href={`#${p.id}`} aria-current={page === p.id ? "page" : undefined} onClick={(e) => { e.preventDefault(); select(p.id); }}>{p.label}</a>)}
         </nav>
         <TopMenu
-          vertical={{ value: lab.vertical || story?.vertical || "retail", onChange: lab.setVertical, options: story ? story.verticals.map((v) => v.id) : ["retail"] }}
+          vertical={{ value: lab.vertical || story?.vertical || "retail", onChange: pickVertical, options: story ? story.verticals.map((v) => v.id) : ["retail"] }}
           theme={{ value: theme, onChange: pickTheme }}
           fontSize={{ value: fontStep, onChange: setFontStep }}
           present={{ active: presenter, onToggle: () => setPresenter((v) => !v), label: "Presenter (P)" }}
@@ -93,7 +98,7 @@ export default function App() {
           help={{ href: "https://github.com/curtismu7/privilege-semantic-cache-LAB#readme" }}
           version={info?.version ? `v${info.version}` : null}
           onReset={reset}
-          extra={<ModeToggle source={source || "mock"} info={info} onSwitch={lab.switchMode} />}
+          extra={<ModeToggle source={source || "mock"} info={info} onSwitch={switchMode} />}
         />
       </header>
       <main className="page">

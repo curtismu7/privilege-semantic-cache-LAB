@@ -212,3 +212,49 @@ describe("Semantic cache page: the key form and the similarity view", () => {
     expect(Number(/Score (\d\.\d{3})/.exec(text("pair-bar-words"))[1])).toBeLessThan(0.3);
   });
 });
+
+describe("Semantic cache page: a scenario named in the address", () => {
+  it("Show it on the Stories page runs the named scenario even when another run is already on screen", async () => {
+    const user = await h.mount();
+    await user.click(await screen.findByTestId("scenario-exact-repeat-hits"));
+    await screen.findByTestId("scenario-result");
+    expect(text("verdict")).toContain("An exact repeat is answered from the cache");
+    await user.click(within(screen.getByRole("navigation", { name: "Lab sections" })).getByRole("link", { name: "Stories and talk track" }));
+    await screen.findByTestId("story-grid");
+    await user.click(screen.getByTestId("story-show-S05"));
+    await waitFor(() => expect(text("verdict")).toContain("A hit after the TTL misses"));
+    expect(window.location.hash).toBe("#cache/ttl-expiry-misses");
+    expect(h.lab.calls.filter((c) => c.path === "/api/scenario/ttl-expiry-misses")).toHaveLength(1);
+  });
+
+  it("an address changed to another scenario while the page is open runs it once; the same one again does nothing", async () => {
+    await h.mount();
+    await screen.findByTestId("scenarios");
+    window.location.hash = "#cache/unrelated-misses";
+    await waitFor(() => expect(text("verdict")).toContain("An unrelated prompt misses"));
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    await new Promise((r) => setTimeout(r, 300));
+    expect(h.lab.calls.filter((c) => c.path === "/api/scenario/unrelated-misses")).toHaveLength(1);
+  });
+});
+
+describe("Similarity view: a slow older answer never overwrites a newer one", () => {
+  it("drops a stale response", async () => {
+    const user = await h.mount();
+    await screen.findByTestId("similarity-view");
+    await waitFor(() => expect(screen.getByTestId("pair-bar")).toBeInTheDocument());
+    let release;
+    const gate = new Promise((r) => { release = r; });
+    const realFetch = globalThis.fetch;
+    let n = 0;
+    globalThis.fetch = (input, init) => { const u = String(input); if (u.includes("/api/similarity") && n++ === 0) return gate.then(() => realFetch(input, init)); return realFetch(input, init); };
+    try {
+      await user.click(screen.getByTestId("pair-unrelated")); // slow request (held)
+      await user.click(screen.getByTestId("pair-close")); // newer request, answers first
+      await waitFor(() => expect(Number(/Score (\d\.\d{3})/.exec(text("pair-bar-words"))[1])).toBeGreaterThan(0.8));
+      release();
+      await new Promise((r) => setTimeout(r, 400));
+      expect(Number(/Score (\d\.\d{3})/.exec(text("pair-bar-words"))[1])).toBeGreaterThan(0.8);
+    } finally { globalThis.fetch = realFetch; }
+  });
+});

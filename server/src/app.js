@@ -230,6 +230,11 @@ export function createApp({
     if (err?.type === 'entity.parse.failed') return res.status(400).json({ error: 'bad_json', message: 'the body is not valid JSON' });
     if (err?.type === 'entity.too.large') return res.status(413).json({ error: 'too_large', message: `the body is over ${BOUNDS.maxBodyBytes} bytes` });
     if (err?.type === 'charset.unsupported' || err?.type === 'encoding.unsupported') return res.status(415).json({ error: 'unsupported_encoding', message: 'send the body as utf-8 JSON' });
+    // Express's own client errors (a malformed percent-escape in a path, for example) carry a 4xx status: honour it with a generic message.
+    const status = Number(err?.status ?? err?.statusCode);
+    if (Number.isInteger(status) && status >= 400 && status < 500) return res.status(status).json({ error: 'bad_request', message: 'the request could not be read' });
+    // A real 500 is logged (the error's name and a short, line-free message; never the request) so it is not silent.
+    process.stderr.write(`${new Date().toISOString()} privilege-semantic-cache-lab internal_error ${String(err?.name).slice(0, 40)}: ${String(err?.message).replace(/[\r\n]+/g, ' ').slice(0, 160)}\n`);
     return res.status(500).json({ error: 'internal_error', message: 'something went wrong in the lab' });
   });
 

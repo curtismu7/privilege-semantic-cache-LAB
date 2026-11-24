@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getKey, getScenarios, getUsage, postAdvance, putKey, putProvider, putStore } from "../api";
 import { Card, Loading } from "../components/Bits.jsx";
 import KeyForm from "./KeyForm.jsx";
@@ -41,11 +41,20 @@ export default function CachePage({ lab }) {
     return () => { live = false; };
   }, [adopt]);
 
-  // "#cache/<scenario>" (the Stories page, a shared link) runs that scenario once the page has loaded.
-  useEffect(() => {
+  // "#cache/<scenario>" (the Stories page's Show it, a shared link, the address bar) runs that scenario when it names one that is not already on screen:
+  // once the page has loaded, and again whenever the address changes to another scenario. Reset, a mode switch and a vertical change clear the scenario
+  // from the address (App.jsx), so a remount never re-runs it.
+  const lastRef = useRef(lab.last);
+  lastRef.current = lab.last;
+  const runFromHash = () => {
     const id = scenarioFromHash();
-    if (id && scenarios.some((s) => s.id === id) && !lab.last) runScenario(id);
-  }, [scenarios.length]); // eslint-disable-line react-hooks/exhaustive-deps
+    const shown = lastRef.current?.kind === "scenario" ? lastRef.current.id : null;
+    if (id && id !== shown && scenarios.some((s) => s.id === id)) runScenario(id);
+  };
+  const runFromHashRef = useRef(runFromHash);
+  runFromHashRef.current = runFromHash;
+  useEffect(() => { runFromHashRef.current(); }, [scenarios.length]);
+  useEffect(() => { const on = () => runFromHashRef.current(); window.addEventListener("hashchange", on); return () => window.removeEventListener("hashchange", on); }, []);
 
   const runScenario = async (id) => {
     setScenarioError(null);
