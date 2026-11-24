@@ -8,12 +8,12 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { BANNER, LAB_MODEL, OPEN_QUESTIONS, SOURCED, UNVERIFIED } from './banner.js';
 import { BOUNDS } from './bounds.js';
-import { SAVED_UNIT, STORE_IDS, validatePrompt } from './cache.js';
+import { DEFAULT_CONFIG, SAVED_UNIT, STORE_IDS, validateConfig, validatePrompt } from './cache.js';
 import { runChecks as defaultChecks } from './checks.js';
 import { castForVertical, loadCustomerConfig, publicConfig } from './customer.js';
 import { DIAGRAM_NAMES, buildDiagram, hasDiagram } from './diagramData.js';
 import { allPassed } from './doctor.js';
-import { ENCODER_LABEL, EMBEDDING_MODEL_IDS, cosine, embed, isEmbeddingModel } from './encoder.js';
+import { ENCODER_LABEL, EMBEDDING_MODEL_IDS, cacheScore, embed, isEmbeddingModel } from './encoder.js';
 import { LabError, invalidPrompt, invalidRequest } from './errors.js';
 import { createHealth } from './health.js';
 import { runPrompt, usageView } from './path.js';
@@ -22,7 +22,7 @@ import { RunObsError } from './runObservability.js';
 import { exchangesFor } from './runTrace.js';
 import { jsonWritesOnly, makeHostCheck, sameOriginWrites } from './safety.js';
 import { SCENARIOS, describeScenarios, findScenario, runScenario } from './scenarios.js';
-import { PROVIDER_STATES, createSession } from './session.js';
+import { PROVIDER_STATES, createSession, validateAdvance, validateProviderState, validateStore } from './session.js';
 import { createRunLog } from './state.js';
 import { buildStories } from './stories.js';
 import { buildTalkTrack } from './talkTrack.js';
@@ -114,10 +114,11 @@ export function createApp({
   app.get('/api/scenarios', (_req, res) => res.json({ banner: BANNER, scenarios: describeScenarios() }));
 
   // A scenario runs on its own lab, never on the workspace's key. Its runs leave the same traces and records as a live run.
+  // (Every route checks its input BEFORE it touches a workspace: a request that is going to be refused creates nothing and evicts nothing.)
   app.post('/api/scenario/:id', (req, res) => {
-    const ws = wsOf(req, res);
     const sc = findScenario(req.params.id);
     if (!sc) return res.status(404).json({ error: 'unknown_scenario', message: 'no such scenario' });
+    const ws = wsOf(req, res);
     const out = runScenario(sc.id);
     const runs = scenarioRuns(sc, out);
     ws.runLog.add({ kind: 'scenario', id: out.id, ok: out.ok });
@@ -135,42 +136,48 @@ export function createApp({
   app.get('/api/key', (req, res) => res.json(keyView(wsOf(req, res))));
 
   app.put('/api/key', (req, res) => {
+    const patch = onlyFields(req.body, ['embeddingModel', 'vectorRedis', 'strictness', 'ttlMs'], 'key config');
+    validateConfig(patch, DEFAULT_CONFIG); // every field is checked on its own, so the default config is enough to refuse a bad patch
     const ws = wsOf(req, res);
-    const config = ws.session.key().setConfig(onlyFields(req.body, ['embeddingModel', 'vectorRedis', 'strictness', 'ttlMs'], 'key config'));
+    const config = ws.session.key().setConfig(patch);
     res.json({ ...keyView(ws), config });
   });
 
   // The two controls the web page adds to the engine's own: a vector store outage, and the mock provider's state (what the next miss meets).
   app.put('/api/store', (req, res) => {
-    const ws = wsOf(req, res);
     const b = onlyFields(req.body, ['store', 'available'], 'store');
+    validateStore(b.store, b.available);
+    const ws = wsOf(req, res);
     ws.session.setStore(b.store, b.available);
     res.json(keyView(ws));
   });
 
   app.put('/api/provider', (req, res) => {
-    const ws = wsOf(req, res);
     const b = onlyFields(req.body, ['state'], 'provider');
+    validateProviderState(b.state);
+    const ws = wsOf(req, res);
     ws.session.setProviderState(b.state);
     res.json(keyView(ws));
   });
 
   // A pair's score, read only: no lookup, no store, no Usage, no clock. It lets the page show the same pair against any strictness.
   app.post('/api/similarity', (req, res) => {
-    const ws = wsOf(req, res);
     const b = onlyFields(req.body, ['a', 'b', 'embeddingModel'], 'similarity');
     validatePrompt(b.a); validatePrompt(b.b);
-    const model = b.embeddingModel === undefined ? ws.session.key().getConfig().embeddingModel : b.embeddingModel;
-    if (!isEmbeddingModel(model)) throw invalidRequest(`embeddingModel must be one of ${EMBEDDING_MODEL_IDS.join(', ')}`);
+    if (b.embeddingModel !== undefined && !isEmbeddingModel(b.embeddingModel)) throw invalidRequest(`embeddingModel must be one of ${EMBEDDING_MODEL_IDS.join(', ')}`);
+    if (!embed(DEFAULT_CONFIG.embeddingModel, b.a) || !embed(DEFAULT_CONFIG.embeddingModel, b.b)) throw invalidPrompt('a prompt has no letters or digits to encode');
+    const model = b.embeddingModel === undefined ? wsOf(req, res).session.key().getConfig().embeddingModel : b.embeddingModel;
     const va = embed(model, b.a); const vb = embed(model, b.b);
     if (!va || !vb) throw invalidPrompt('a prompt has no letters or digits to encode');
-    res.json({ embeddingModel: model, similarity: cosine(va, vb), encoder: ENCODER_LABEL });
+    res.json({ embeddingModel: model, similarity: cacheScore(va, vb), encoder: ENCODER_LABEL });
   });
 
   app.post('/api/run', (req, res) => {
-    const ws = wsOf(req, res);
     const b = onlyFields(req.body, ['prompt', 'guardBlocked'], 'run');
     if (b.guardBlocked !== undefined && typeof b.guardBlocked !== 'boolean') throw invalidRequest('guardBlocked must be true or false');
+    validatePrompt(b.prompt);
+    if (b.guardBlocked !== true && !embed(DEFAULT_CONFIG.embeddingModel, b.prompt)) throw invalidPrompt('prompt has no letters or digits to encode'); // (a blocked prompt is never encoded)
+    const ws = wsOf(req, res);
     const s = ws.session;
     const out = runPrompt(s.lab, s.key().id, { prompt: b.prompt, guardBlocked: b.guardBlocked === true });
     ws.runLog.add({ kind: 'run', outcome: out.outcome });
@@ -178,9 +185,9 @@ export function createApp({
   });
 
   app.post('/api/clock/advance', (req, res) => {
-    const ws = wsOf(req, res);
     const b = onlyFields(req.body, ['ms'], 'advance');
-    res.json({ clockMs: ws.session.advance(b.ms) });
+    validateAdvance(b.ms);
+    res.json({ clockMs: wsOf(req, res).session.advance(b.ms) });
   });
 
   app.get('/api/usage', (req, res) => {
@@ -236,7 +243,7 @@ export function createApp({
     if (err instanceof WorkspaceError) return res.status(err.status).json({ error: err.code, message: err.message });
     if (err instanceof RunObsError) return res.status(err.status || 400).json({ error: err.code, message: err.message });
     if (err?.type === 'entity.parse.failed') return res.status(400).json({ error: 'bad_json', message: 'the body is not valid JSON' });
-    if (err?.type === 'entity.too.large') return res.status(413).json({ error: 'too_large', message: `the body is over ${BOUNDS.maxBodyBytes} bytes` });
+    if (err?.type === 'entity.too.large') return res.status(413).json({ error: 'too_large', message: `the body is over ${Number.isInteger(err.limit) ? err.limit : BOUNDS.maxBodyBytes} bytes` });
     if (err?.type === 'charset.unsupported' || err?.type === 'encoding.unsupported') return res.status(415).json({ error: 'unsupported_encoding', message: 'send the body as utf-8 JSON' });
     // Express's own client errors (a malformed percent-escape in a path, for example) carry a 4xx status: honour it with a generic message.
     const status = Number(err?.status ?? err?.statusCode);

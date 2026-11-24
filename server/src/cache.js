@@ -2,7 +2,7 @@
 // beyond what the 2026-11-21 release notes say (each key names an embedding model and a vector Redis, a match strictness and a TTL;
 // the Usage view shows Requests, From cache, Saved). All time is the kit's lab clock.
 import { BOUNDS } from './bounds.js';
-import { cosine, embed, isEmbeddingModel, EMBEDDING_MODEL_IDS } from './encoder.js';
+import { cacheScore, embed, isEmbeddingModel, EMBEDDING_MODEL_IDS } from './encoder.js';
 import { invalidConfig, invalidPrompt, storeUnavailable } from './errors.js';
 import { createLlmKey } from './model-gateway-sim/llmKey.js';
 
@@ -91,7 +91,7 @@ export function createKeyCache({ id, config = DEFAULT_CONFIG, clock, stores }) {
       let best = null;
       for (const e of store.entries) {
         if (e.keyId !== id || e.embeddingModel !== cfg.embeddingModel) continue;
-        const score = Math.max(0, cosine(vec, e.vector)); // a cosine below zero is reported as 0, so strictness 0 means "everything hits"
+        const score = cacheScore(vec, e.vector);
         if (best === null || score > best.score) best = { entry: e, score };
       }
       const hit = best !== null && best.score >= cfg.strictness;

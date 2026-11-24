@@ -22,6 +22,9 @@ export default function useLab() {
   const [busy, setBusy] = useState(false);
   const [epoch, setEpoch] = useState(0);
   const seq = useRef(0);
+  // A run is stale when the page started over after it was sent, except when the only restart was the forgotten-workspace one its own request caused.
+  const stale = (g) => g !== gen.current && !(g + 1 === gen.current && adopted.current === gen.current);
+  const adopted = useRef(-1); // the generation the forgotten-workspace restart created: the run that triggered it keeps its answer
   const gen = useRef(0); // goes up whenever the page starts over (Reset, a new vertical, a mode switch, a forgotten workspace): an older run that answers late is dropped
 
   const load = useCallback(async (v) => {
@@ -59,7 +62,7 @@ export default function useLab() {
     const g = gen.current;
     try {
       const r = await postRun(prompt, guardBlocked);
-      if (g !== gen.current) return { ok: true, dropped: true }; // the page started over while this ran
+      if (stale(g)) return { ok: true, dropped: true }; // the page started over while this ran
       if (!r.ok) return { ok: false, status: r.status, message: say(r, "The run"), code: r.body?.error };
       const { runId, trace, ...out } = r.body;
       setLast({ kind: "live", out, prompt, runId, trace });
@@ -73,7 +76,7 @@ export default function useLab() {
     const g = gen.current;
     try {
       const r = await postScenario(id);
-      if (g !== gen.current) return { ok: true, dropped: true };
+      if (stale(g)) return { ok: true, dropped: true };
       if (!r.ok) return { ok: false, status: r.status, message: say(r, "The scenario"), code: r.body?.error };
       const { runId, trace, ...played } = r.body;
       setLast({ kind: "scenario", id, played, runId, trace });
@@ -91,7 +94,7 @@ export default function useLab() {
   }, [load, vertical]);
 
   // The server forgot this tab's workspace and built a fresh one: show defaults again (the page says why).
-  const workspaceForgotten = useCallback(() => { setLast(null); setObs(null); setEpoch((n) => n + 1); load(vertical); }, [load, vertical]);
+  const workspaceForgotten = useCallback(() => { gen.current += 1; adopted.current = gen.current; setLast(null); setObs(null); setEpoch((n) => n + 1); load(vertical); }, [load, vertical]);
 
   return { workspaceForgotten, vertical, setVertical, info, story, source: info?.source || null, error, modeError, last, obs, busy, epoch, reload: () => load(vertical), switchMode, runLive, runScenario, reset };
 }

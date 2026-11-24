@@ -299,6 +299,11 @@ describe("Scenario Usage and late answers", () => {
     await user.click(screen.getByTestId("scenario-unrelated-misses"));
     expect(await screen.findByTestId("workspace-forgotten")).toHaveTextContent(/The server forgot this workspace; the lab was reset to its defaults/);
     await waitFor(() => expect(text("usage-requests")).toBe("0"));
+    // the restart left only the page in the address, and the scenario was not run a second time by the remount
+    expect(window.location.hash).toBe("#cache");
+    await new Promise((r) => setTimeout(r, 500));
+    expect(h.lab.calls.filter((c) => c.path === "/api/scenario/unrelated-misses")).toHaveLength(1);
+    expect(screen.getByTestId("verdict")).toHaveTextContent(/An unrelated prompt misses/); // the request that triggered it kept its answer
     await user.click(screen.getByTestId("workspace-forgotten-dismiss"));
     expect(screen.queryByTestId("workspace-forgotten")).toBeNull();
     // this tab's own Reset empties the workspace on purpose: no banner

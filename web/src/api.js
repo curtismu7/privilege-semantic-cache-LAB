@@ -25,6 +25,6 @@ export const putStore = (store, available) => call("PUT", "/api/store", { store,
 export const putProvider = (state) => call("PUT", "/api/provider", { state });
 export const postSimilarity = (a, b, embeddingModel) => call("POST", "/api/similarity", { a, b, embeddingModel });
 export const getObservability = () => call("GET", "/api/run-observability");
-export const postReset = async () => { const r = await call("POST", "/api/reset", {}); expectFreshWorkspace(); return r; }; // the next call rebuilds this tab's workspace on purpose
+export const postReset = async () => { const r = await call("POST", "/api/reset", {}); if (r.ok) expectFreshWorkspace(); return r; }; // the next call rebuilds this tab's workspace on purpose
 // Rule 19: the server-side Mock/Real toggle: exactly { source }. A 409 (Real not available) comes back as data with the reason.
 export const setMode = (source) => call("POST", "/api/mode", { source });

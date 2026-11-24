@@ -10,6 +10,19 @@ import { createLab } from './path.js';
 export const SESSION_KEY_ID = 'lab-key';
 export { PROVIDER_STATES };
 
+// Checked by the API BEFORE a workspace is touched, so a refused request creates (and evicts) nothing.
+export function validateAdvance(ms) {
+  if (typeof ms !== 'number' || !Number.isFinite(ms) || ms < 0 || ms > BOUNDS.maxAdvanceMs) throw invalidRequest(`ms must be a number from 0 to ${BOUNDS.maxAdvanceMs}`);
+  return ms;
+}
+export function validateStore(store, available) {
+  if (typeof store !== 'string' || !STORE_IDS.includes(store)) throw invalidRequest(`store must be one of ${STORE_IDS.join(', ')}`);
+  if (typeof available !== 'boolean') throw invalidRequest('available must be true or false');
+}
+export function validateProviderState(state) {
+  if (typeof state !== 'string' || !PROVIDER_STATES.includes(state)) throw invalidRequest(`state must be one of ${PROVIDER_STATES.join(', ')}`);
+}
+
 export function createSession() {
   const lab = createLab();
   lab.addKey(SESSION_KEY_ID, DEFAULT_CONFIG);
@@ -17,19 +30,17 @@ export function createSession() {
     lab,
     key: () => lab.key(SESSION_KEY_ID),
     advance(ms) {
-      if (typeof ms !== 'number' || !Number.isFinite(ms) || ms < 0 || ms > BOUNDS.maxAdvanceMs) throw invalidRequest(`ms must be a number from 0 to ${BOUNDS.maxAdvanceMs}`);
-      return lab.clock.advance(ms);
+      return lab.clock.advance(validateAdvance(ms));
     },
     // Switch one vector store stand-in off or on, to show the named outage error. Only the lab's own stores can be named.
     setStore(store, available) {
-      if (typeof store !== 'string' || !STORE_IDS.includes(store)) throw invalidRequest(`store must be one of ${STORE_IDS.join(', ')}`);
-      if (typeof available !== 'boolean') throw invalidRequest('available must be true or false');
+      validateStore(store, available);
       lab.stores.setAvailable(store, available);
       return this.stores();
     },
     stores: () => STORE_IDS.map((id) => ({ id, available: lab.stores.isAvailable(id), entries: lab.stores.liveSize(id, lab.clock.now()) })),
     setProviderState(state) {
-      if (typeof state !== 'string' || !PROVIDER_STATES.includes(state)) throw invalidRequest(`state must be one of ${PROVIDER_STATES.join(', ')}`);
+      validateProviderState(state);
       lab.provider.setState(state);
       return lab.provider.getState();
     },

@@ -50,7 +50,9 @@ export default function App() {
 
   useEffect(() => { if (theme === "auto") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = theme; }, [theme]);
   // The server forgot this tab's workspace (the 20-workspace cap, a restart) and built a fresh one: say so, and show the defaults.
-  useEffect(() => { const on = () => { setForgotten(true); forgottenRef.current(); }; window.addEventListener(FORGOTTEN_EVENT, on); return () => window.removeEventListener(FORGOTTEN_EVENT, on); }, []);
+  const clearRef = useRef(null);
+  clearRef.current = () => clearScenarioHash();
+  useEffect(() => { const on = () => { setForgotten(true); clearRef.current(); forgottenRef.current(); }; window.addEventListener(FORGOTTEN_EVENT, on); return () => window.removeEventListener(FORGOTTEN_EVENT, on); }, []);
   useEffect(() => { applyFontSize(fontStep); try { localStorage.setItem(FONT_KEY, fontStep); } catch { /* not remembered */ } }, [fontStep]);
   useEffect(() => { const on = () => setPage(pageFromHash()); window.addEventListener("hashchange", on); return () => window.removeEventListener("hashchange", on); }, []);
   useEffect(() => {

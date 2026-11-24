@@ -134,3 +134,56 @@ test('a workspace the server had to build is announced with X-Workspace-Fresh; a
     assert.equal(fresh(await lab.get('/api/key', { 'x-workspace': 'w20' })), '1');
   } finally { await lab.close(); }
 });
+
+const FRANCE = 'What is the capital of France?'; const POEM = 'Write a poem about autumn leaves';
+
+test('one score for the lookup and the Similarity card: a pair whose raw cosine is negative scores 0 in both, and strictness 0 is a HIT in both', async () => {
+  const { cosine, embed, cacheScore } = await import('../src/encoder.js');
+  assert.ok(cosine(embed('lab-embed-a', FRANCE), embed('lab-embed-a', POEM)) < 0, 'the pair really has a negative raw cosine');
+  assert.equal(cacheScore(embed('lab-embed-a', FRANCE), embed('lab-embed-a', POEM)), 0);
+  const lab = await startLab();
+  try {
+    const card = await lab.send('POST', '/api/similarity', { a: FRANCE, b: POEM, embeddingModel: 'lab-embed-a' });
+    assert.equal(card.json.similarity, 0);
+    assert.equal((await lab.send('PUT', '/api/key', { strictness: 0 })).status, 200);
+    await lab.send('POST', '/api/run', { prompt: FRANCE });
+    const run = (await lab.send('POST', '/api/run', { prompt: POEM })).json;
+    assert.equal(run.outcome, 'hit');
+    assert.equal(run.similarity, card.json.similarity, 'the run produces exactly the score the card showed');
+  } finally { await lab.close(); }
+});
+
+test('a request that will be refused creates nothing: the workspace is built only by the first valid call', async () => {
+  const lab = await startLab();
+  try {
+    const refused = [
+      ['POST', '/api/run', { prompt: '' }], ['POST', '/api/run', { prompt: '???' }], ['POST', '/api/run', { prompt: 'a', guardBlocked: 'yes' }], ['POST', '/api/scenario/nope', {}],
+      ['PUT', '/api/key', { strictness: 5 }], ['PUT', '/api/key', {}], ['PUT', '/api/store', { store: 'nope', available: true }], ['PUT', '/api/provider', { state: 'on fire' }],
+      ['POST', '/api/clock/advance', { ms: -1 }], ['POST', '/api/similarity', { a: '', b: 'x' }], ['POST', '/api/similarity', { a: 'x', b: 'y', embeddingModel: 'nope' }],
+    ];
+    let i = 0;
+    for (const [method, path, body] of refused) {
+      const ws = `refused-${i++}`;
+      const r = await lab.send(method, path, body, { 'x-workspace': ws });
+      assert.ok(r.status >= 400 && r.status < 500, `${method} ${path} ${JSON.stringify(body)} -> ${r.status}`);
+      assert.equal(r.headers.get('x-workspace-fresh'), null, 'a refusal builds no workspace');
+      assert.equal((await lab.get('/api/key', { 'x-workspace': ws })).headers.get('x-workspace-fresh'), '1', `${path}: the first valid call builds it`);
+    }
+    // and a flood of refused requests with new ids evicts nobody
+    await lab.send('PUT', '/api/key', { strictness: 0.3 }, { 'x-workspace': 'keeper' });
+    for (let k = 0; k < 30; k++) await lab.send('POST', '/api/run', { prompt: '' }, { 'x-workspace': `flood-${k}` });
+    assert.equal((await lab.get('/api/key', { 'x-workspace': 'keeper' })).json.config.strictness, 0.3);
+  } finally { await lab.close(); }
+});
+
+test('the 413 message names the limit of the route that refused: 131072 for the general limit, the larger one for /api/similarity', async () => {
+  const lab = await startLab();
+  try {
+    const general = await lab.send('POST', '/api/run', { prompt: 'x'.repeat(BOUNDS.maxBodyBytes + 10) });
+    assert.equal(general.status, 413);
+    assert.match(general.json.message, new RegExp(`over ${BOUNDS.maxBodyBytes} bytes`));
+    const sim = await lab.send('POST', '/api/similarity', { a: 'x', b: 'y', pad: 'x'.repeat(BOUNDS.maxSimilarityBodyBytes) });
+    assert.equal(sim.status, 413);
+    assert.match(sim.json.message, new RegExp(`over ${BOUNDS.maxSimilarityBodyBytes} bytes`));
+  } finally { await lab.close(); }
+});

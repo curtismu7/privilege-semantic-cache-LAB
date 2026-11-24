@@ -60,6 +60,10 @@ export function cosine(a, b) {
   return d === 0 ? 0 : Math.round((dot / d) * 1e6) / 1e6;
 }
 
+// THE score the cache works with: a cosine below zero counts as 0. Lookup and the read-only /api/similarity both use this one function, so the
+// Similarity card never shows a score a run cannot produce, and strictness 0 means "everything hits" in both.
+export const cacheScore = (a, b) => Math.max(0, cosine(a, b));
+
 export const similarity = (modelId, textA, textB) => {
   const a = embed(modelId, textA); const b = embed(modelId, textB);
   return a && b ? cosine(a, b) : 0;

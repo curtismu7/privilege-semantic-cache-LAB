@@ -16,26 +16,31 @@ export function workspaceId() {
   return memo;
 }
 
-// The server announces a workspace it had to build with X-Workspace-Fresh: 1. A tab that has already used its id is told by that header that the server
-// forgot the workspace (the 20-workspace cap, a restart): the page says so and reloads its state. After this tab's own Reset the next call is fresh on purpose.
+// The server announces a workspace it had to build with X-Workspace-Fresh: 1. A tab is told that the server FORGOT its workspace (the 20-workspace cap, a
+// restart) only when the request that got the header was SENT after a successful response had already arrived: the first calls of a new tab go out in
+// parallel and one of them always builds the workspace, however the answers are ordered. One counter orders both events (a request is sent, a response
+// arrives), so the decision never depends on which answer came back first. After this tab's own Reset the next call is fresh on purpose.
 export const FORGOTTEN_EVENT = "psc:workspace-forgotten";
-let seen = false;
+let tick = 0;
+let firstOkAt = null; // the tick at which the first successful response arrived
 let expectFresh = false;
-export function noteResponse(res) {
-  const fresh = res?.headers?.get?.("x-workspace-fresh") === "1";
-  if (fresh) {
-    if (seen && !expectFresh && typeof window !== "undefined") window.dispatchEvent(new Event(FORGOTTEN_EVENT));
+export function noteResponse(res, sentAt) {
+  const arrivedAt = ++tick;
+  if (res?.headers?.get?.("x-workspace-fresh") === "1") {
+    const earlierSuccess = firstOkAt !== null && firstOkAt < sentAt;
+    if (earlierSuccess && !expectFresh && typeof window !== "undefined") window.dispatchEvent(new Event(FORGOTTEN_EVENT));
     expectFresh = false;
   }
-  if (res && res.status < 500) seen = true;
+  if (res?.ok && firstOkAt === null) firstOkAt = arrivedAt; // a refused request (4xx) builds nothing, so it proves nothing
 }
 export const expectFreshWorkspace = () => { expectFresh = true; };
 
 export const workspaceFetch = async (url, opts = {}) => {
+  const sentAt = ++tick;
   const res = await fetch(url, { ...opts, headers: { "content-type": "application/json", ...(opts.headers || {}), "x-workspace": workspaceId() } });
-  noteResponse(res);
+  noteResponse(res, sentAt);
   return res;
 };
 
 // For tests: a new tab starts with a new id.
-export function forgetWorkspace() { memo = null; seen = false; expectFresh = false; try { window.sessionStorage.removeItem(KEY); } catch { /* blocked */ } }
+export function forgetWorkspace() { memo = null; tick = 0; firstOkAt = null; expectFresh = false; try { window.sessionStorage.removeItem(KEY); } catch { /* blocked */ } }
