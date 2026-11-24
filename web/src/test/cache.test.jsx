@@ -243,6 +243,22 @@ describe("Semantic cache page: a scenario named in the address", () => {
     await new Promise((r) => setTimeout(r, 300));
     expect(h.lab.calls.filter((c) => c.path === "/api/scenario/unrelated-misses")).toHaveLength(1);
   });
+
+  it("an address change while a run is in flight does not fire a second scenario on top of the running one", async () => {
+    let release;
+    const gate = new Promise((r) => { release = r; });
+    const user = await h.mount({ overrides: { "/api/scenario/exact-repeat-hits": (_i, _u, go) => gate.then(() => go()) } });
+    await screen.findByTestId("scenarios");
+    await user.click(await screen.findByTestId("scenario-exact-repeat-hits")); // held in flight
+    window.location.hash = "#cache/ttl-expiry-misses";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    await new Promise((r) => setTimeout(r, 200));
+    expect(h.lab.calls.filter((c) => c.method === "POST" && c.path === "/api/scenario/ttl-expiry-misses")).toHaveLength(0);
+    release();
+    await screen.findByTestId("scenario-result");
+    // the address's scenario still runs once the page is free again
+    await waitFor(() => expect(h.lab.calls.filter((c) => c.method === "POST" && c.path === "/api/scenario/ttl-expiry-misses")).toHaveLength(1));
+  });
 });
 
 describe("Similarity view: a slow older answer never overwrites a newer one", () => {

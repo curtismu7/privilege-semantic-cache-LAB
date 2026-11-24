@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DIMS, ENCODER_LABEL, EMBEDDING_MODELS, EMBEDDING_MODEL_IDS, cosine, embed, normalizeText, similarity } from '../src/encoder.js';
+import { cacheScore, DIMS, ENCODER_LABEL, EMBEDDING_MODELS, EMBEDDING_MODEL_IDS, cosine, embed, normalizeText } from '../src/encoder.js';
 
 // 16 triples chosen for this lab: [anchor, paraphrase, unrelated]. The paraphrases reuse wording on purpose: the stand-in measures
 // shared text, not meaning, and the README says so. A paraphrase must always score higher than an unrelated prompt, by a clear margin.
@@ -34,8 +34,8 @@ test('determinism: the same text gives the same vector, every time, and a fixed 
     assert.deepEqual(Array.from(a), Array.from(b));
   }
   // Pinned scores: the encoder must not drift between runs or Node versions (a change here changes every scenario).
-  assert.equal(similarity('lab-embed-a', 'hello world', 'hello there'), 0.454545);
-  assert.equal(similarity('lab-embed-c', 'hello world', 'hello there'), 0.692935);
+  assert.equal(cacheScore(embed('lab-embed-a', 'hello world'), embed('lab-embed-a', 'hello there')), 0.454545);
+  assert.equal(cacheScore(embed('lab-embed-c', 'hello world'), embed('lab-embed-c', 'hello there')), 0.692935);
   const v = embed('lab-embed-a', 'hello world');
   assert.equal(cosine(v, v), 1);
 });
@@ -47,7 +47,7 @@ test('vectors are unit length', () => {
 
 test('normalisation: case, punctuation and spacing do not matter; nothing left means nothing to encode', () => {
   assert.equal(normalizeText('  Hello,   WORLD!! '), 'hello world');
-  assert.equal(similarity('lab-embed-a', 'Hello, World!', 'hello   world'), 1);
+  assert.equal(cacheScore(embed('lab-embed-a', 'Hello, World!'), embed('lab-embed-a', 'hello   world')), 1);
   assert.equal(embed('lab-embed-a', '???'), null);
   assert.equal(embed('lab-embed-a', ''), null);
   assert.equal(embed('lab-embed-a', '   '), null);
@@ -73,7 +73,7 @@ test(`similarity ordering: a paraphrase beats an unrelated prompt on all ${TABLE
   assert.ok(TABLE.length >= 15);
   for (const m of EMBEDDING_MODEL_IDS) {
     for (const [anchor, para, other] of TABLE) {
-      const p = similarity(m, anchor, para); const u = similarity(m, anchor, other);
+      const p = cacheScore(embed(m, anchor), embed(m, para)); const u = cacheScore(embed(m, anchor), embed(m, other));
       assert.ok(p > u + 0.15, `${m}: "${para}" ${p} should beat "${other}" ${u} against "${anchor}"`);
     }
   }
@@ -81,20 +81,20 @@ test(`similarity ordering: a paraphrase beats an unrelated prompt on all ${TABLE
 
 test('on the default model a paraphrase scores above 0.4 and an unrelated prompt below 0.35, so a strictness between them separates them', () => {
   for (const [anchor, para, other] of TABLE) {
-    assert.ok(similarity('lab-embed-a', anchor, para) > 0.4, para);
-    assert.ok(similarity('lab-embed-a', anchor, other) < 0.35, other);
+    assert.ok(cacheScore(embed('lab-embed-a', anchor), embed('lab-embed-a', para)) > 0.4, para);
+    assert.ok(cacheScore(embed('lab-embed-a', anchor), embed('lab-embed-a', other)) < 0.35, other);
   }
 });
 
 test('similarity is symmetric and an identical text scores exactly 1', () => {
   for (const [a, b] of TABLE) {
-    assert.equal(similarity('lab-embed-a', a, b), similarity('lab-embed-a', b, a));
-    assert.equal(similarity('lab-embed-a', a, a), 1);
+    assert.equal(cacheScore(embed('lab-embed-a', a), embed('lab-embed-a', b)), cacheScore(embed('lab-embed-a', b), embed('lab-embed-a', a)));
+    assert.equal(cacheScore(embed('lab-embed-a', a), embed('lab-embed-a', a)), 1);
   }
 });
 
 test('the stand-in measures shared text, not meaning: a true paraphrase with no shared words scores low (the lab says so)', () => {
-  assert.ok(similarity('lab-embed-a', 'How do I get my money back?', 'What is your refund policy') < 0.4);
+  assert.ok(cacheScore(embed('lab-embed-a', 'How do I get my money back?'), embed('lab-embed-a', 'What is your refund policy')) < 0.4);
 });
 
 test('a very long prompt and non-Latin text encode without error', () => {

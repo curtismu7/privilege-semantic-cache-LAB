@@ -49,7 +49,7 @@ export default function CachePage({ lab }) {
   const runFromHash = () => {
     const id = scenarioFromHash();
     const shown = lastRef.current?.kind === "scenario" ? lastRef.current.id : null;
-    if (id && id !== shown && scenarios.some((s) => s.id === id)) runScenario(id);
+    if (id && id !== shown && !lab.busy && scenarios.some((s) => s.id === id)) runScenario(id);
   };
   const runFromHashRef = useRef(runFromHash);
   runFromHashRef.current = runFromHash;
@@ -61,13 +61,14 @@ export default function CachePage({ lab }) {
     try { window.history.replaceState(null, "", `#cache/${id}`); } catch { /* ignore */ }
     const r = await lab.runScenario(id);
     if (!r.ok) setScenarioError(r.message);
+    else runFromHashRef.current(); // an address that changed while this run was in flight is honoured now that the page is free
   };
   const run = async () => {
     setRunError(null);
     try { window.history.replaceState(null, "", "#cache"); } catch { /* ignore */ }
     const r = await lab.runLive(prompt, guardBlocked);
-    if (!r.ok) setRunError(r.message);
-    await Promise.all([refreshUsage(), refreshKey()]);
+    if (!r.ok) { setRunError(r.message); return; }
+    if (!r.dropped) await Promise.all([refreshUsage(), refreshKey()]); // a dropped run changed nothing the usage and the key report
   };
   const save = async () => {
     setSaving(true); setSaveError(null);
