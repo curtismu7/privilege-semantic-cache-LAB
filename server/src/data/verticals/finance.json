@@ -1,0 +1,12 @@
+{
+  "id": "finance",
+  "label": "Finance",
+  "source": "invented example; no customer data",
+  "cast": {
+    "castBrand": "Fabrikam Bank",
+    "castApp": "the advisor briefing assistant",
+    "castTask": "preparing a briefing on this week's open service requests",
+    "castKey": "advisor-briefing-key",
+    "castOwner": "the digital channels team"
+  }
+}

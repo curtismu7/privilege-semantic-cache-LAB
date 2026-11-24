@@ -24,3 +24,23 @@ export const OPEN_QUESTIONS = Object.freeze([
     note: 'No scenario and no result is shown for this: it needs the owner to confirm how the product scopes the cache.',
   }),
 ]);
+
+export const RELEASE_NOTES_DATE = '2026-11-21';
+
+// The Limits page: exactly what the release notes say (the only sourced claims), and this lab's own model. The one place these are written.
+export const SOURCED = Object.freeze([
+  `Each LLM key can reuse earlier answers for semantically similar prompts (${RELEASE_NOTES_DATE} release notes).`,
+  'Each key names its own embedding model and its own vector Redis.',
+  'Each key sets a match strictness and a TTL.',
+  'The Usage view shows Requests, From cache and Saved.',
+]);
+
+export const LAB_MODEL = Object.freeze([
+  'The encoder is a stand-in: it hashes character n-grams into a 256-number vector and compares two vectors with cosine similarity. It is NOT a real embedding model: it measures shared text, not meaning, so a paraphrase scores high only when it reuses words. The four lab embedding ids are four different encoders (a different n-gram size or seed), so their vectors never agree by accident.',
+  'A key keeps one list of earlier prompts and answers per vector store stand-in. A lookup compares the new prompt only with entries made by the same key with the same embedding model in the same store. A score equal to the strictness is a hit.',
+  'The nearest live entry decides. A hit returns its stored answer, makes no model call and does not extend its TTL. A miss calls the lab\'s mock provider and stores the answer, live from the end of the call until stored time plus TTL (gone AT that time).',
+  'Saved is the stored answer\'s output tokens, counted in lab-model tokens, for every hit. Requests counts every lookup that reached the cache.',
+  'The guard decision comes from the caller (the "guard blocks this prompt" box). A blocked prompt is never looked up, sent, stored or counted.',
+  'The vector store stand-in is an in-memory list capped at 100 entries (the oldest goes first). It can be switched off to show an outage: the run then ends in the named error vector_store_unavailable (HTTP 503 in the API), with no model call and no Usage.',
+  'All time is the lab clock. The Advance control moves it; nothing waits or sleeps.',
+]);

@@ -1,0 +1,3 @@
+# semantic-cache.json is a byte copy of SEMANTIC_CACHE_FLOW exported from diagram-studio-LAB (core/src/apps.js) as JSON.stringify(x, null, 2) plus a newline, from origin/main at commit c662412eac527035cc216f50491cc05b64337037 (PR #35, merged).
+# Re-run the export and re-pin if diagram-studio changes this diagram: the vendoring is from diagram-studio main, never from a branch.
+d1d40979356d55d03139a7335af4b04448abaefd1df14d43b9eabe80ff524de5  semantic-cache.json

@@ -1,0 +1,8 @@
+{
+  "id": "S02",
+  "scenario": "paraphrase-hits-with-score",
+  "title": "A paraphrase above the strictness is a hit, and the score is shown",
+  "goal": "For {{castBrand}}, {{castApp}} rarely asks in exactly the same words. While {{castTask}}, the same question comes in slightly different wording.",
+  "obstacle": "An exact-match cache would miss every rewording, so the saving would be small.",
+  "control": "The key compares the new prompt with earlier ones and the result shows the score and the entry it matched. In this lab the encoder is a stand-in that measures shared words, not meaning, so a paraphrase scores high only when it reuses them."
+}

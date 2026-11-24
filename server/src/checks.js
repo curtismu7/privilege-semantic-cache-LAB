@@ -7,6 +7,9 @@ import { nodeCheck } from './doctor.js';
 import { checkPin, PIN_FILE } from './pin.js';
 import { assertBindAllowed, bindHost, resolvePort } from './safety.js';
 import { SCENARIOS, runScenario } from './scenarios.js';
+import { STORIES, scanStories } from './stories.js';
+import { loadTalkTrack } from './talkTrack.js';
+import { DIAGRAM_NAMES, diagramProblems, rawDiagram } from './diagramData.js';
 
 const attempt = (id, fn) => {
   try { const r = fn(); return { id, level: r.ok ? 'pass' : 'fail', detail: r.detail }; } catch (e) { return { id, level: 'fail', detail: String(e.message).slice(0, 160) }; }
@@ -32,6 +35,20 @@ export function runChecks(env = process.env) {
     ok: OPEN_QUESTIONS.some((q) => q.id === 'cache-scope-per-user' && q.result === null && q.status === 'open') && !SCENARIOS.some((s) => /user|principal|leak/i.test(s.id)),
     detail: 'the per-user cache scope is an open-question card with no result, and no scenario answers it',
   })));
+  // Stories are data with {{cast}} tokens (rule 10): every token is defined by all three vertical packs, every story names a real scenario and has a talk-track section.
+  checks.push(attempt('stories', () => {
+    const talk = loadTalkTrack();
+    const scan = scanStories(STORIES, undefined, Object.fromEntries(talk.map((t) => [`talk-track ${t.id}`, t])));
+    const sections = new Set(talk.map((t) => t.id));
+    const lonely = STORIES.filter((st) => !SCENARIOS.some((sc) => sc.id === st.scenario) || !sections.has(st.id)).map((st) => `${st.id}: no scenario or no talk-track section`);
+    const bad = [...scan.missing, ...lonely];
+    return { ok: bad.length === 0 && STORIES.length === SCENARIOS.length, detail: bad.length ? bad.slice(0, 3).join('; ') : `${scan.stories} stories and the talk track use only tokens every vertical pack defines (${scan.tokens.length} tokens)` };
+  }));
+  // Rule 17: the diagram is diagram-studio/1 data, loaded by name and checked with the studio's own validator.
+  checks.push(attempt('diagram', () => {
+    const bad = DIAGRAM_NAMES.filter((n) => !rawDiagram(n) || diagramProblems(rawDiagram(n)).length > 0);
+    return { ok: bad.length === 0, detail: bad.length ? `invalid or missing: ${bad.join(', ')}` : `${DIAGRAM_NAMES.join(', ')} loads by name and passes the diagram-studio/1 checks` };
+  }));
   for (const sc of SCENARIOS) {
     checks.push(attempt(`scenario:${sc.id}`, () => {
       const r = runScenario(sc.id);

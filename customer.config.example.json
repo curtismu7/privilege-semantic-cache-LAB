@@ -1,0 +1,7 @@
+{
+  "_readme": "Copy to customer.config.json (git-ignored) to brand the lab. Branding and vocabulary only: name, tagline, vertical (retail, health or finance) and the cast words the stories and the talk track use. Everything is plain text; anything else is ignored with a warning. Never put a real customer's name in a file that is committed.",
+  "name": "Privilege Semantic Cache LAB",
+  "tagline": "An LLM key reuses an earlier answer for a similar prompt.",
+  "vertical": "retail",
+  "cast": { "brand": "Northwind Retail", "app": "the order-support assistant", "task": "summarising the open order cases for the week", "keyName": "orders-assistant-key", "owner": "the support platform team" }
+}

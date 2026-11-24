@@ -1,6 +1,6 @@
 # privilege-semantic-cache-LAB spec
 
-**Status:** step 1 (core) built, Mock only   **Owner:** Curtis Muir (decides)   **Source:** the 2026-11-21 vendor release notes (the only source); expands "Lab 2" of the model-gateway labs spec. Everything the notes do not say is **UNVERIFIED (lab model)** and the lab shows that label.
+**Status:** step 2 (web UI, presenter mode, talk track, content pack, Docker) built, Mock only   **Owner:** Curtis Muir (decides)   **Source:** the 2026-11-21 vendor release notes (the only source); expands "Lab 2" of the model-gateway labs spec. Everything the notes do not say is **UNVERIFIED (lab model)** and the lab shows that label.
 
 ## Goal
 Show per-key semantic caching: a similar prompt is answered from the key's cache, and the Usage view shows Requests, From cache and Saved. The notes say each LLM key names its own embedding model and vector Redis, a match strictness and a TTL; that is all that is sourced.
@@ -22,6 +22,7 @@ Also: encoder determinism; a paraphrase scores above an unrelated prompt on a 16
 
 ## API (all under `/api/`)
 `GET /health` (demo-health/1), `GET /info` (mode mock, realAvailable false with a plain reason, banner, UNVERIFIED list, `openQuestions`), `POST /mode` (refuses real and live), `GET /scenarios`, `POST /scenario/:id`, `GET|PUT /key` (embeddingModel, vectorRedis, strictness 0..1, ttlMs), `POST /run {prompt, guardBlocked?}`, `POST /clock/advance {ms}`, `GET /usage`, `POST /reset`.
+Step 2 adds, all bounded and same-origin: `PUT /store {store, available}` (a vector store outage toggle), `PUT /provider {state}` (the mock model's state), `POST /similarity {a, b, embeddingModel?}` (read-only score of a pair: no lookup, no Usage, no clock), `GET /story`, `GET /diagram?name=`, `GET /run-observability`. State is per workspace (`X-Workspace`).
 
 ## Unhappy paths (each has a test)
 Empty, blank, non-string, no-letters and over-20000-character prompts (`invalid_prompt`); strictness outside 0..1, TTL zero, negative, fractional or over a week, unknown model or store, unknown fields, prototype keys (`invalid_config`); body over 128 KB (413), non-JSON (415), bad JSON (400); store capped at 100 entries (oldest evicted); provider failure is a named result and stores nothing; foreign Host 421; cross-origin write 403; loopback bind only; netguard self-test, zero outbound attempts.
@@ -32,8 +33,11 @@ How Saved is computed (the lab counts output tokens); the cache scope (the lab s
 ## Open question (card, no result)
 Is the cache scoped by key only, or also by user? **No cross-user leak scenario is built** until the owner confirms the scoping. `GET /api/info` carries the question in `openQuestions`.
 
+## Web (step 2)
+Pages: Semantic cache (the key form, the similarity view with a movable strictness line, the prompt box, the nine scenarios, clock, store and provider controls, then the verdict first, Usage, the trace and what the run left behind), Diagram (`semantic-cache`, loaded by name from diagram-studio data), Stories and talk track (nine stories as data with `{{cast}}` tokens and three vertical packs), Limits (UNVERIFIED). The open question on the cache scope is a card with no result. Simulation banner first on every page; Mock/Real toggle in the header, Real disabled with the plain reason.
+
 ## Out of scope
-Real embeddings or Redis; Real mode (owner-run, read-only, built after Mock; the toggle stays disabled with a plain reason); the web UI, diagram, story mode, Docker and shelf entry (later steps); ports and repos (the port 7840 is PROVISIONAL, not claimed).
+Real embeddings or Redis; Real mode (owner-run, read-only, built after Mock; the toggle stays disabled with a plain reason); story mode; the shelf registry entry, proxy route, submodule pin and release (step 3, owner-gated); ports and repos (the port 7847 is PROVISIONAL, claimed provisionally and not registered).
 
 ## Verification
 `npm test` on Node 26 (Air); `npm run doctor`; vendored kit pin test; history scan 0 and gitleaks clean; mutation checks on the six core rules.

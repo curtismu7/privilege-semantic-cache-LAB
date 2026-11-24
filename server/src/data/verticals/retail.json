@@ -1,0 +1,12 @@
+{
+  "id": "retail",
+  "label": "Retail",
+  "source": "invented example; no customer data",
+  "cast": {
+    "castBrand": "Northwind Retail",
+    "castApp": "the order-support assistant",
+    "castTask": "summarising the open order cases for the week",
+    "castKey": "orders-assistant-key",
+    "castOwner": "the support platform team"
+  }
+}

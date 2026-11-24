@@ -1,0 +1,8 @@
+{
+  "id": "S08",
+  "scenario": "guard-blocked-not-cached",
+  "title": "A prompt the guard blocked never enters the cache",
+  "goal": "For {{castBrand}}, {{castOwner}} must be sure a blocked prompt for {{castApp}} cannot come back from the cache later.",
+  "obstacle": "If a blocked prompt were stored, a later ask could be served its answer.",
+  "control": "In the lab the guard runs first: a blocked prompt is not looked up, sent, stored or counted. Whether the product runs the guard before or after the lookup is UNVERIFIED."
+}

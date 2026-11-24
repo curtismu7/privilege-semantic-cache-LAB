@@ -1,0 +1,164 @@
+{
+  "schema": "diagram-studio/1",
+  "id": "semantic-cache",
+  "title": "Semantic Cache: a similar prompt reuses an earlier answer",
+  "lede": "LLM keys can reuse earlier answers for semantically similar prompts. Each key names its own embedding model and vector Redis and sets match strictness and TTL, and the Usage tab shows Requests, From cache and what was Saved (release notes). The lookup order and the encoder are the lab’s own model: a stand-in, not a real embedding model.",
+  "groups": {
+    "app": {
+      "label": "Caller",
+      "color": "dark"
+    },
+    "gw": {
+      "label": "Gateway: the LLM key",
+      "color": "red"
+    },
+    "store": {
+      "label": "Per-key services",
+      "color": "blue"
+    },
+    "model": {
+      "label": "Model",
+      "color": "grey"
+    }
+  },
+  "nodes": [
+    {
+      "id": "app",
+      "group": "app",
+      "label": "Your app",
+      "sub": [
+        "Sends a prompt with the LLM key"
+      ],
+      "x": 0,
+      "y": 170
+    },
+    {
+      "id": "gw",
+      "group": "gw",
+      "label": "Gateway",
+      "sub": [
+        "Match strictness and TTL are set per key (release notes)"
+      ],
+      "x": 400,
+      "y": 170
+    },
+    {
+      "id": "embed",
+      "group": "store",
+      "label": "Embedding model",
+      "sub": [
+        "Named per key (release notes)",
+        "Lab: a stand-in encoder, not a real embedding model"
+      ],
+      "x": 800,
+      "y": 0
+    },
+    {
+      "id": "vector",
+      "group": "store",
+      "label": "Vector Redis",
+      "sub": [
+        "Named per key (release notes)",
+        "Lab model: earlier prompts and answers"
+      ],
+      "x": 800,
+      "y": 170
+    },
+    {
+      "id": "model",
+      "group": "model",
+      "label": "LLM",
+      "sub": [
+        "Called only when there is no hit (lab model)"
+      ],
+      "x": 800,
+      "y": 340
+    },
+    {
+      "id": "ret",
+      "group": "gw",
+      "label": "Gateway returns the answer",
+      "sub": [
+        "Back to the app",
+        "Usage tab: Requests, From cache, Saved (release notes)",
+        "How Saved is computed: UNVERIFIED"
+      ],
+      "x": 1300,
+      "y": 170
+    }
+  ],
+  "edges": [
+    {
+      "source": "app",
+      "target": "gw",
+      "label": "1 prompt"
+    },
+    {
+      "source": "gw",
+      "target": "embed",
+      "label": "2 embed with the key’s embedding model"
+    },
+    {
+      "source": "gw",
+      "target": "vector",
+      "label": "3 search the key’s vector Redis"
+    },
+    {
+      "source": "vector",
+      "target": "ret",
+      "label": "4a hit above the key’s strictness: cached answer to the gateway"
+    },
+    {
+      "source": "gw",
+      "target": "model",
+      "label": "4b miss: call the model",
+      "dashed": true
+    },
+    {
+      "source": "model",
+      "target": "ret",
+      "label": "5 fresh answer to the gateway, stored with the key’s TTL"
+    }
+  ],
+  "steps": [
+    {
+      "title": "A prompt arrives",
+      "what": "The app sends a prompt with its LLM key. The embedding model, vector Redis, match strictness and TTL belong to the key (release notes).",
+      "edges": [
+        0
+      ]
+    },
+    {
+      "title": "Embed the prompt",
+      "what": "The prompt is turned into a vector by the embedding model the key names.",
+      "why": "Lab model: a deterministic stand-in encoder, labelled as not a real embedding model, so a run is repeatable.",
+      "edges": [
+        1
+      ]
+    },
+    {
+      "title": "Look in the key’s vector store",
+      "what": "In the lab model the vector is compared with earlier prompts stored in the key’s own vector Redis, so two keys with different settings do not share answers.",
+      "why": "Lab model. UNVERIFIED: whether the cache is scoped by user or only by key, whether AI Guard runs before or after the lookup, and what the product does when the Redis is unavailable.",
+      "edges": [
+        2
+      ]
+    },
+    {
+      "title": "A close match is a hit",
+      "what": "In the lab model, if the closest earlier prompt is at or above the key’s match strictness, its cached answer goes back through the gateway and the model is not called. The Usage tab counts it under From cache.",
+      "why": "UNVERIFIED: how Saved is computed (tokens or cost).",
+      "edges": [
+        3
+      ]
+    },
+    {
+      "title": "No match is a miss",
+      "what": "In the lab model the gateway calls the model, the fresh answer is stored with the key’s TTL, and a later similar prompt can reuse it until the TTL passes. The Usage tab counts the request.",
+      "edges": [
+        4,
+        5
+      ]
+    }
+  ]
+}

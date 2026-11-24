@@ -3,19 +3,25 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Privilege Semantic Cache LAB: per-key semantic caching with a deterministic stand-in encoder (not a real embedding model), a Redis stand-in, a lab clock and a Usage view (Requests, From cache, Saved). Mock only; everything beyond the 2026-11-21 release notes is UNVERIFIED (the lab's own model).",
+  "description": "Privilege Semantic Cache LAB: per-key semantic caching with a deterministic stand-in encoder (not a real embedding model), a Redis stand-in, a lab clock and a Usage view (Requests, From cache, Saved). Engine, server API and web UI (Mock only); everything beyond the 2026-11-21 release notes is UNVERIFIED (the lab's own model).",
   "license": "MIT",
   "workspaces": [
-    "server"
+    "server",
+    "web"
   ],
   "engines": {
     "node": ">=26"
   },
   "scripts": {
     "start": "npm start -w server",
-    "test": "npm test -w server",
+    "build": "npm run build -w web",
+    "test": "npm test -w server && npm test -w web && node --test scripts/*.test.mjs",
     "doctor": "node scripts/doctor.mjs",
     "reset": "node scripts/reset.mjs",
-    "prepare": "git config core.hooksPath .githooks || true"
+    "prepare": "git config core.hooksPath .githooks || true",
+    "content-pack": "node scripts/build-content-pack.mjs && node scripts/validate-content-pack.mjs"
+  },
+  "devDependencies": {
+    "ajv": "^8.20.0"
   }
 }

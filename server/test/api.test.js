@@ -4,10 +4,11 @@ import http from 'node:http';
 import { createApp, startHttpServer } from '../src/app.js';
 import { SCENARIOS } from '../src/scenarios.js';
 import { BOUNDS } from '../src/bounds.js';
+import { validateConfig } from '../src/customer.js';
 
 let server; let base; let port;
 before(async () => {
-  ({ server, url: base } = await startHttpServer({ port: 0, host: '127.0.0.1', app: createApp({ env: { LAB_ALLOWED_HOSTS: 'lab.example' } }) }));
+  ({ server, url: base } = await startHttpServer({ port: 0, host: '127.0.0.1', app: createApp({ env: { LAB_ALLOWED_HOSTS: 'lab.example' }, customer: validateConfig({}), log: () => {} }) }));
   port = server.address().port;
   base = base.replace(/\/$/, '');
 });
@@ -175,7 +176,7 @@ test('unknown API paths and methods answer JSON, never HTML', async () => {
 });
 
 test('Host check: a foreign or malformed Host is 421; an allowed name is served', async () => {
-  for (const host of ['evil.example', 'evil.example:7840', '[::1]evil', '127.0.0.1.evil.example', 'a b']) {
+  for (const host of ['evil.example', 'evil.example:7847', '[::1]evil', '127.0.0.1.evil.example', 'a b']) {
     const r = await raw('GET', '/api/info', { host });
     assert.equal(r.status, 421, host);
   }

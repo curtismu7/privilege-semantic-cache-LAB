@@ -1,0 +1,8 @@
+{
+  "id": "S04",
+  "scenario": "strictness-flips-the-pair",
+  "title": "Moving the strictness flips the same pair between hit and miss",
+  "goal": "For {{castBrand}}, {{castOwner}} has to choose how close a prompt must be before {{castKey}} reuses an answer.",
+  "obstacle": "Too loose and {{castApp}} may get a near answer to a different question; too strict and nothing is saved.",
+  "control": "The strictness is a per-key setting. The same pair of prompts scores the same each time; at a low strictness it is a hit and at a high one it is a miss. A score equal to the strictness is a hit."
+}
