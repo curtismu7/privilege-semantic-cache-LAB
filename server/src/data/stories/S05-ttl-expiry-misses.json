@@ -1,0 +1,8 @@
+{
+  "id": "S05",
+  "scenario": "ttl-expiry-misses",
+  "title": "After the TTL the answer is gone",
+  "goal": "For {{castBrand}}, {{castApp}} reuses answers for {{castTask}}, but an answer must not live for ever.",
+  "obstacle": "A cached answer that never expires could go stale.",
+  "control": "The key's TTL is counted on the lab clock: an answer is live from the moment it is stored until the TTL passes, and at exactly that time it is gone, so the next ask goes to the model again."
+}

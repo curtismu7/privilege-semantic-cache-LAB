@@ -4,10 +4,11 @@ import http from 'node:http';
 import { createApp, startHttpServer } from '../src/app.js';
 import { SCENARIOS } from '../src/scenarios.js';
 import { BOUNDS } from '../src/bounds.js';
+import { validateConfig } from '../src/customer.js';
 
 let server; let base; let port;
 before(async () => {
-  ({ server, url: base } = await startHttpServer({ port: 0, host: '127.0.0.1', app: createApp({ env: { LAB_ALLOWED_HOSTS: 'lab.example' } }) }));
+  ({ server, url: base } = await startHttpServer({ port: 0, host: '127.0.0.1', app: createApp({ env: { LAB_ALLOWED_HOSTS: 'lab.example' }, customer: validateConfig({}), log: () => {} }) }));
   port = server.address().port;
   base = base.replace(/\/$/, '');
 });
@@ -175,7 +176,7 @@ test('unknown API paths and methods answer JSON, never HTML', async () => {
 });
 
 test('Host check: a foreign or malformed Host is 421; an allowed name is served', async () => {
-  for (const host of ['evil.example', 'evil.example:7840', '[::1]evil', '127.0.0.1.evil.example', 'a b']) {
+  for (const host of ['evil.example', 'evil.example:7847', '[::1]evil', '127.0.0.1.evil.example', 'a b']) {
     const r = await raw('GET', '/api/info', { host });
     assert.equal(r.status, 421, host);
   }
@@ -193,5 +194,13 @@ test('same-origin writes: a cross-origin Origin or a cross-site fetch is 403, on
     assert.equal((await send2(p, body, { 'sec-fetch-site': 'cross-site' })).status, 403);
     assert.equal((await send2(p, body, { origin: 'null' })).status, 403);
     assert.equal((await send2(p, body, { 'sec-fetch-site': 'same-origin' })).status, 200);
+  }
+});
+
+test('Express client errors keep their 4xx: a malformed percent-escape in a path is a 400 bad_request, never a 500', async () => {
+  for (const p of ['/api/scenario/%E0%A4%A']) {
+    const r = await post(p, {});
+    assert.equal(r.status, 400, p);
+    assert.deepEqual(await r.json(), { error: 'bad_request', message: 'the request could not be read' });
   }
 });

@@ -1,0 +1,294 @@
+{
+  "schema": "demo-content-pack/1",
+  "id": "privilege-semantic-cache-lab",
+  "title": "Privilege Semantic Cache LAB",
+  "version": "0.1.0",
+  "demo": {
+    "id": "privilege-semantic-cache-lab",
+    "name": "Privilege Semantic Cache LAB",
+    "catalog": "D000",
+    "baseUrl": "http://localhost:7847",
+    "doctor": "/api/health",
+    "tags": [
+      "llm",
+      "semantic-cache",
+      "usage",
+      "privilege",
+      "simulated",
+      "mock-only"
+    ]
+  },
+  "glossary": [
+    {
+      "id": "semantic-cache",
+      "term": "Semantic cache",
+      "definition": "An LLM key can reuse an earlier answer for a semantically similar prompt, with its own embedding model and vector Redis (2026-11-21 release notes). The match, the order of the lookup and the guard, and the outage behaviour shown here are this lab's own model.",
+      "aliases": [
+        "per-key cache",
+        "prompt cache"
+      ]
+    },
+    {
+      "id": "match-strictness",
+      "term": "Match strictness",
+      "definition": "A per-key setting: how close a new prompt must be to an earlier one before its answer is reused (release notes). In the lab a score at or above the strictness, from 0 to 1, is a hit; the scale is the lab's own.",
+      "aliases": [
+        "strictness",
+        "similarity threshold"
+      ]
+    },
+    {
+      "id": "cache-ttl",
+      "term": "Cache TTL",
+      "definition": "A per-key setting: how long a stored answer is reused (release notes). In the lab, on the lab clock, an answer is live from the end of the model call until its stored time plus the TTL, and gone at exactly that time.",
+      "aliases": [
+        "TTL"
+      ]
+    },
+    {
+      "id": "cache-usage",
+      "term": "Usage: Requests, From cache, Saved",
+      "definition": "The Usage view counts Requests, From cache and Saved (release notes). How Saved is computed is not stated: the lab counts the stored answer's output tokens in lab-model tokens and labels the unit UNVERIFIED.",
+      "aliases": [
+        "saved"
+      ]
+    },
+    {
+      "id": "stand-in-encoder",
+      "term": "Stand-in encoder",
+      "definition": "The lab does not use a real embedding model. A deterministic stand-in hashes character n-grams and compares them with cosine similarity, so it measures shared words, not meaning. It exists so a run is repeatable.",
+      "aliases": [
+        "not a real embedding model"
+      ]
+    },
+    {
+      "id": "unverified-model",
+      "term": "UNVERIFIED (lab model)",
+      "definition": "Anything the release notes do not say is the lab's own model and is labelled UNVERIFIED: how Saved is computed, whether the cache is scoped by key only or also by user (an open question), whether the guard runs before or after the lookup, what the product does when the Redis is down.",
+      "aliases": [
+        "lab model"
+      ]
+    }
+  ],
+  "sources": [],
+  "cards": [
+    {
+      "id": "try-exact-repeat-hits",
+      "label": "S01: An exact repeat is answered from the cache",
+      "description": "The key's cache answers the repeat itself: the score is 1, the model is not called, and Usage shows From cache and Saved (the lab counts the stored answer's output tokens).",
+      "group": "try-it",
+      "action": {
+        "type": "route",
+        "href": "/#cache/exact-repeat-hits"
+      },
+      "terms": [
+        "semantic-cache"
+      ],
+      "story": "S01"
+    },
+    {
+      "id": "try-paraphrase-hits-with-score",
+      "label": "S02: A paraphrase above the strictness is a hit, and the score is shown",
+      "description": "The key compares the new prompt with earlier ones and the result shows the score and the entry it matched. In this lab the encoder is a stand-in that measures shared words, not meaning, so a paraphrase scores high only when it reuses them.",
+      "group": "try-it",
+      "action": {
+        "type": "route",
+        "href": "/#cache/paraphrase-hits-with-score"
+      },
+      "terms": [
+        "semantic-cache",
+        "stand-in-encoder"
+      ],
+      "story": "S02"
+    },
+    {
+      "id": "try-unrelated-misses",
+      "label": "S03: An unrelated prompt is a miss",
+      "description": "A prompt about something else scores near zero, falls below the strictness and goes to the model; its answer is stored on its own.",
+      "group": "try-it",
+      "action": {
+        "type": "route",
+        "href": "/#cache/unrelated-misses"
+      },
+      "terms": [
+        "semantic-cache",
+        "stand-in-encoder"
+      ],
+      "story": "S03"
+    },
+    {
+      "id": "try-strictness-flips-the-pair",
+      "label": "S04: Moving the strictness flips the same pair between hit and miss",
+      "description": "The strictness is a per-key setting. The same pair of prompts scores the same each time; at a low strictness it is a hit and at a high one it is a miss. A score equal to the strictness is a hit.",
+      "group": "try-it",
+      "action": {
+        "type": "route",
+        "href": "/#cache/strictness-flips-the-pair"
+      },
+      "terms": [
+        "match-strictness",
+        "stand-in-encoder"
+      ],
+      "story": "S04"
+    },
+    {
+      "id": "try-ttl-expiry-misses",
+      "label": "S05: After the TTL the answer is gone",
+      "description": "The key's TTL is counted on the lab clock: an answer is live from the moment it is stored until the TTL passes, and at exactly that time it is gone, so the next ask goes to the model again.",
+      "group": "try-it",
+      "action": {
+        "type": "route",
+        "href": "/#cache/ttl-expiry-misses"
+      },
+      "terms": [
+        "cache-ttl"
+      ],
+      "story": "S05"
+    },
+    {
+      "id": "try-usage-matches-calls",
+      "label": "S06: The Usage view matches the calls",
+      "description": "Usage shows Requests, From cache and Saved, and the numbers equal the calls made. How the product computes Saved is not in the release notes: the lab counts output tokens and labels the unit UNVERIFIED.",
+      "group": "try-it",
+      "action": {
+        "type": "route",
+        "href": "/#cache/usage-matches-calls"
+      },
+      "terms": [
+        "cache-usage",
+        "unverified-model"
+      ],
+      "story": "S06"
+    },
+    {
+      "id": "try-two-keys-never-share",
+      "label": "S07: Two keys with different embedding settings never share an answer",
+      "description": "In the lab each key compares only with entries made by that key, with that embedding model, in that store. Whether the product also scopes by user is an open question the lab does not answer.",
+      "group": "try-it",
+      "action": {
+        "type": "route",
+        "href": "/#cache/two-keys-never-share"
+      },
+      "terms": [
+        "semantic-cache",
+        "unverified-model"
+      ],
+      "story": "S07"
+    },
+    {
+      "id": "try-guard-blocked-not-cached",
+      "label": "S08: A prompt the guard blocked never enters the cache",
+      "description": "In the lab the guard runs first: a blocked prompt is not looked up, sent, stored or counted. Whether the product runs the guard before or after the lookup is UNVERIFIED.",
+      "group": "try-it",
+      "action": {
+        "type": "route",
+        "href": "/#cache/guard-blocked-not-cached"
+      },
+      "terms": [
+        "unverified-model"
+      ],
+      "story": "S08"
+    },
+    {
+      "id": "try-store-outage-named-error",
+      "label": "S09: The vector store is down and the error has a name",
+      "description": "The lab returns a named error, makes no model call and counts no Usage. What the product does in an outage is UNVERIFIED: the lab claims neither that it fails open nor that it fails closed.",
+      "group": "try-it",
+      "action": {
+        "type": "route",
+        "href": "/#cache/store-outage-named-error"
+      },
+      "terms": [
+        "unverified-model"
+      ],
+      "story": "S09"
+    },
+    {
+      "id": "concept-limits",
+      "label": "What is sourced and what is the lab's model",
+      "description": "The release-notes claims, the lab's own model, the list of what is UNVERIFIED and the open question on the cache scope.",
+      "group": "concept",
+      "action": {
+        "type": "route",
+        "href": "/#limits"
+      },
+      "terms": [
+        "unverified-model"
+      ]
+    },
+    {
+      "id": "ref-doctor",
+      "label": "Doctor and health",
+      "description": "Preflight checks and the demo-health/1 endpoint.",
+      "group": "setup",
+      "action": {
+        "type": "route",
+        "href": "/api/health"
+      }
+    }
+  ],
+  "diagrams": [
+    {
+      "id": "semantic-cache",
+      "label": "Semantic cache: a similar prompt reuses an earlier answer",
+      "href": "/#diagram",
+      "mode": "mock"
+    }
+  ],
+  "stories": [
+    {
+      "id": "S01",
+      "title": "An exact repeat is answered from the cache",
+      "say": "The key's cache answers the repeat itself: the score is 1, the model is not called, and Usage shows From cache and Saved (the lab counts the stored answer's output tokens).",
+      "file": "server/src/data/stories/S01-exact-repeat-hits.json"
+    },
+    {
+      "id": "S02",
+      "title": "A paraphrase above the strictness is a hit, and the score is shown",
+      "say": "The key compares the new prompt with earlier ones and the result shows the score and the entry it matched. In this lab the encoder is a stand-in that measures shared words, not meaning, so a paraphrase scores high only when it reuses them.",
+      "file": "server/src/data/stories/S02-paraphrase-hits-with-score.json"
+    },
+    {
+      "id": "S03",
+      "title": "An unrelated prompt is a miss",
+      "say": "A prompt about something else scores near zero, falls below the strictness and goes to the model; its answer is stored on its own.",
+      "file": "server/src/data/stories/S03-unrelated-misses.json"
+    },
+    {
+      "id": "S04",
+      "title": "Moving the strictness flips the same pair between hit and miss",
+      "say": "The strictness is a per-key setting. The same pair of prompts scores the same each time; at a low strictness it is a hit and at a high one it is a miss. A score equal to the strictness is a hit.",
+      "file": "server/src/data/stories/S04-strictness-flips-the-pair.json"
+    },
+    {
+      "id": "S05",
+      "title": "After the TTL the answer is gone",
+      "say": "The key's TTL is counted on the lab clock: an answer is live from the moment it is stored until the TTL passes, and at exactly that time it is gone, so the next ask goes to the model again.",
+      "file": "server/src/data/stories/S05-ttl-expiry-misses.json"
+    },
+    {
+      "id": "S06",
+      "title": "The Usage view matches the calls",
+      "say": "Usage shows Requests, From cache and Saved, and the numbers equal the calls made. How the product computes Saved is not in the release notes: the lab counts output tokens and labels the unit UNVERIFIED.",
+      "file": "server/src/data/stories/S06-usage-matches-calls.json"
+    },
+    {
+      "id": "S07",
+      "title": "Two keys with different embedding settings never share an answer",
+      "say": "In the lab each key compares only with entries made by that key, with that embedding model, in that store. Whether the product also scopes by user is an open question the lab does not answer.",
+      "file": "server/src/data/stories/S07-two-keys-never-share.json"
+    },
+    {
+      "id": "S08",
+      "title": "A prompt the guard blocked never enters the cache",
+      "say": "In the lab the guard runs first: a blocked prompt is not looked up, sent, stored or counted. Whether the product runs the guard before or after the lookup is UNVERIFIED.",
+      "file": "server/src/data/stories/S08-guard-blocked-not-cached.json"
+    },
+    {
+      "id": "S09",
+      "title": "The vector store is down and the error has a name",
+      "say": "The lab returns a named error, makes no model call and counts no Usage. What the product does in an outage is UNVERIFIED: the lab claims neither that it fails open nor that it fails closed.",
+      "file": "server/src/data/stories/S09-store-outage-named-error.json"
+    }
+  ]
+}

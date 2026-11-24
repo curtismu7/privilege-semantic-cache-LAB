@@ -9,7 +9,7 @@ test('every doctor check passes, and every scenario has its own check', () => {
   const checks = runChecks({});
   assert.equal(allPassed(checks), true, JSON.stringify(checks.filter((c) => c.level === 'fail')));
   for (const sc of SCENARIOS) assert.equal(checks.find((c) => c.id === `scenario:${sc.id}`)?.level, 'pass', sc.id);
-  for (const id of ['node', 'banner', 'bind', 'kit-pin', 'config-validation', 'open-questions']) assert.ok(checks.find((c) => c.id === id), id);
+  for (const id of ['node', 'banner', 'bind', 'kit-pin', 'config-validation', 'open-questions', 'stories', 'diagram']) assert.ok(checks.find((c) => c.id === id), id);
 });
 
 test('doctor fails on a reserved port', () => {

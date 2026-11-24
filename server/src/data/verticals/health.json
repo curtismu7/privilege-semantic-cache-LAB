@@ -1,0 +1,12 @@
+{
+  "id": "health",
+  "label": "Health",
+  "source": "invented example; no customer data",
+  "cast": {
+    "castBrand": "Contoso Health",
+    "castApp": "the care-team notes assistant",
+    "castTask": "drafting a summary of the shift handover notes",
+    "castKey": "care-notes-key",
+    "castOwner": "the clinical informatics team"
+  }
+}

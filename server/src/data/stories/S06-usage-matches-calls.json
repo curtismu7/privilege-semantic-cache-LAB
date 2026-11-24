@@ -1,0 +1,8 @@
+{
+  "id": "S06",
+  "scenario": "usage-matches-calls",
+  "title": "The Usage view matches the calls",
+  "goal": "For {{castBrand}}, {{castOwner}} wants to see what the cache saved for {{castKey}}.",
+  "obstacle": "Without counts nobody can tell whether the cache is doing anything.",
+  "control": "Usage shows Requests, From cache and Saved, and the numbers equal the calls made. How the product computes Saved is not in the release notes: the lab counts output tokens and labels the unit UNVERIFIED."
+}

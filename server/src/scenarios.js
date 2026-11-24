@@ -256,7 +256,7 @@ function play(sc) {
   }
   const usage = {}; const entries = {};
   for (const id of lab.keyIds()) { usage[id] = usageView(lab.key(id)); entries[id] = lab.key(id).entryCount(); }
-  const stores = Object.fromEntries(STORE_IDS.map((s) => [s, lab.stores.size(s)]));
+  const stores = Object.fromEntries(STORE_IDS.map((s) => [s, lab.stores.liveSize(s, lab.clock.now())]));
   return { steps, usage, entries, stores, providerCalls };
 }
 

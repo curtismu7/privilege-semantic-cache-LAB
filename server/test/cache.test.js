@@ -185,3 +185,22 @@ test('a prototype-pollution probe does not pollute', () => {
   assert.throws(() => validateConfig(JSON.parse('{"__proto__":{"polluted":true}}')));
   assert.equal({}.polluted, undefined);
 });
+
+test('a cosine below zero is reported as 0: strictness 0 hits even a stored entry that points the other way', () => {
+  const { keys } = setup({ k: { ...A, strictness: 0 } });
+  keys.k.store('jungle', 'a stored answer', 10);
+  const r = keys.k.lookup('nickel'); // raw cosine -0.204 with lab-embed-a
+  assert.equal(r.similarity, 0);
+  assert.equal(r.hit, true);
+  assert.equal(r.matched.answer, 'a stored answer');
+});
+
+test('liveSize counts only entries whose TTL has not passed, even before a lookup sweeps them', () => {
+  const { clock, stores, keys } = setup();
+  keys.k.store(P, 'the answer', 30);
+  assert.equal(stores.size('vector-redis-a'), 1);
+  assert.equal(stores.liveSize('vector-redis-a', clock.now()), 1);
+  clock.advance(1000); // stored at 0, TTL 1000: gone AT 1000
+  assert.equal(stores.size('vector-redis-a'), 1, 'the raw list still holds it until a lookup sweeps');
+  assert.equal(stores.liveSize('vector-redis-a', clock.now()), 0);
+});

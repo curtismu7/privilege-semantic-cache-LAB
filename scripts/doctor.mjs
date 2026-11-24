@@ -1,4 +1,4 @@
-// Preflight: the same checks GET /api/health reports from (one per scenario, with its expected result), plus the netguard self-test,
+// Preflight: the same checks GET /api/health reports from (one per scenario, with its expected result, the stories and the diagram), plus the netguard self-test,
 // a real pass through the HTTP API on a throwaway loopback port, and whether the lab's port is free. Prints only pass/fail lines.
 // Exit 1 on failure.
 import net from 'node:net';
@@ -21,7 +21,8 @@ report(self.ok ? 'pass' : 'fail', 'netguard-self-test', self.ok ? `${self.blocke
 try {
   const { createApp, startHttpServer } = await load('server/src/app.js');
   const { SCENARIOS } = await load('server/src/scenarios.js');
-  const app = createApp();
+  const { validateConfig } = await load('server/src/customer.js'); // the doctor never reads the author's own customer.config.json
+  const app = createApp({ customer: validateConfig({}), log: () => {} }); // no stdout lines from the doctor's own runs
   const { server, url } = await startHttpServer({ port: 0, host: '127.0.0.1', app });
   try {
     const base = url.replace(/\/$/, '');
@@ -45,17 +46,24 @@ try {
     const first = await post('/api/run', { prompt: 'How do I reset my password?' });
     const again = await post('/api/run', { prompt: 'How do I reset my password?' });
     report(first.json.outcome === 'miss' && again.json.outcome === 'hit' && again.json.usage.fromCache === 1 ? 'pass' : 'fail', 'http-run', 'a repeat prompt is a miss, then a hit, and Usage counts it');
+    const off = await send('PUT', '/api/store', { store: 'vector-redis-a', available: false });
+    const outage = await post('/api/run', { prompt: 'Is the store down?' });
+    report(off.status === 200 && outage.json.outcome === 'error' && outage.json.error.code === 'vector_store_unavailable' ? 'pass' : 'fail', 'http-store-outage', 'a store switched off gives the named error');
+    const story = await (await fetch(`${base}/api/story`)).json();
+    report(story.stories?.length === 9 && !/\{\{/.test(JSON.stringify(story)) ? 'pass' : 'fail', 'http-story', 'nine stories, no unfilled token');
+    const dia = await (await fetch(`${base}/api/diagram?name=semantic-cache`)).json();
+    report(dia.name === 'semantic-cache' && dia.steps?.length >= 6 ? 'pass' : 'fail', 'http-diagram', 'the diagram loads by name');
     const reset = await post('/api/reset');
     report(reset.json.reset === 'ok' ? 'pass' : 'fail', 'http-reset', `cleared ${reset.json.cleared} runs`);
-  } finally { await new Promise((res) => server.close(res)); }
+  } finally { app.locals.health.stop(); await new Promise((res) => server.close(res)); }
 } catch (e) { report('fail', 'http-cycle', `the HTTP pass could not run: ${String(e.message).slice(0, 100)}`); }
 
 report(guard.attempts.length === 0 ? 'pass' : 'fail', 'zero-outbound', `${guard.attempts.length} real outbound attempts during the doctor run`);
 
-const port = Number(process.env.PORT) || 7840;
+const port = Number(process.env.PORT) || 7847;
 await new Promise((resolve) => {
   const s = net.createServer();
   s.once('error', (e) => { report('fail', 'port-free', `${port} is not free (${e.code})`); resolve(); });
-  s.listen(port, '127.0.0.1', () => s.close(() => { report('pass', 'port-free', `${port} is free (7840 is PROVISIONAL, not claimed yet)`); resolve(); }));
+  s.listen(port, '127.0.0.1', () => s.close(() => { report('pass', 'port-free', `${port} is free (7847 is PROVISIONAL: claimed provisionally, not registered)`); resolve(); }));
 });
 process.exit(failed ? 1 : 0);

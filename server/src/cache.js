@@ -2,7 +2,7 @@
 // beyond what the 2026-11-21 release notes say (each key names an embedding model and a vector Redis, a match strictness and a TTL;
 // the Usage view shows Requests, From cache, Saved). All time is the kit's lab clock.
 import { BOUNDS } from './bounds.js';
-import { cosine, embed, isEmbeddingModel, EMBEDDING_MODEL_IDS } from './encoder.js';
+import { cacheScore, embed, isEmbeddingModel, EMBEDDING_MODEL_IDS } from './encoder.js';
 import { invalidConfig, invalidPrompt, storeUnavailable } from './errors.js';
 import { createLlmKey } from './model-gateway-sim/llmKey.js';
 
@@ -48,6 +48,8 @@ export function createVectorStores() {
     setAvailable(id, available) { get(id).available = Boolean(available); },
     isAvailable: (id) => get(id).available,
     size: (id) => get(id).entries.length,
+    // Entries still live at `now` (an entry whose TTL has passed is gone for every view, even before a lookup sweeps it).
+    liveSize: (id, now) => get(id).entries.filter((e) => isLive(e, now)).length,
     sweep(id, now) { const s = get(id); const before = s.entries.length; s.entries = s.entries.filter((e) => isLive(e, now)); return before - s.entries.length; },
     add(id, entry) {
       const s = get(id);
@@ -89,7 +91,7 @@ export function createKeyCache({ id, config = DEFAULT_CONFIG, clock, stores }) {
       let best = null;
       for (const e of store.entries) {
         if (e.keyId !== id || e.embeddingModel !== cfg.embeddingModel) continue;
-        const score = cosine(vec, e.vector);
+        const score = cacheScore(vec, e.vector);
         if (best === null || score > best.score) best = { entry: e, score };
       }
       const hit = best !== null && best.score >= cfg.strictness;

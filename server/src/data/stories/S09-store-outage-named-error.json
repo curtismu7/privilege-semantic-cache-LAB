@@ -1,0 +1,8 @@
+{
+  "id": "S09",
+  "scenario": "store-outage-named-error",
+  "title": "The vector store is down and the error has a name",
+  "goal": "For {{castBrand}}, {{castApp}} keeps calling {{castKey}} while the key's vector Redis is unavailable.",
+  "obstacle": "A blank page or a silent failure would hide the outage from {{castOwner}}.",
+  "control": "The lab returns a named error, makes no model call and counts no Usage. What the product does in an outage is UNVERIFIED: the lab claims neither that it fails open nor that it fails closed."
+}

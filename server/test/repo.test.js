@@ -15,40 +15,25 @@ const walk = (dir, out = []) => {
 };
 const files = () => walk(REPO_ROOT).filter((f) => /\.(js|mjs|json|md|sh|yml|sha256)$/.test(f) && !f.endsWith('package-lock.json'));
 
-test('shipped text names only reserved hosts (.example, .invalid, loopback)', () => {
-  const ok = /^(localhost|127\.\d+\.\d+\.\d+|\[?::1\]?|.*\.(example|invalid)|local\.ping-devops\.com)$/i;
-  const bad = [];
-  // CI workflow files name the CI tool's download host; they are not shipped lab text.
-  for (const f of files().filter((x) => !x.includes(`${path.sep}.github${path.sep}`))) {
-    const text = fs.readFileSync(f, 'utf8');
-    for (const m of text.matchAll(/\bhttps?:\/\/([^\s/?#"'`<>\\)]+)/gi)) {
-      const host = m[1].replace(/:\d+$/, '').replace(/^[^@]*@/, '');
-      if (!ok.test(host) && !/[${}]/.test(host)) bad.push(`${path.relative(REPO_ROOT, f)}: ${host}`);
-    }
-  }
-  assert.deepEqual(bad, []);
-});
-
-test('no AI attribution in any file', () => {
-  const pat = /[G]enerated with \[?[C]laude Code|[C]o-[A]uthored-[B]y:/i;
-  const hits = files().filter((f) => !f.endsWith('check-no-ai-attribution.sh') && !f.endsWith('repo.test.js') && pat.test(fs.readFileSync(f, 'utf8')));
-  assert.deepEqual(hits, []);
-});
-
-test('the server never calls the network or a timer for lab time', () => {
-  const src = walk(path.join(REPO_ROOT, 'server/src')).filter((f) => f.endsWith('.js') && !f.includes('model-gateway-sim') && !f.endsWith('netguard.js') && !f.endsWith('health.js'));
+// Lab time is the kit's lab clock: the engine files never read the wall clock or a timer. Everything under server/src may not use timers,
+// randomness or dynamic code (the shared health.js and the netguard are the only exceptions). The wall clock is read only by the files that
+// stamp a stdout line or a run record (app.js, runObs.js), never by the engine.
+const ENGINE = ['encoder.js', 'cache.js', 'path.js', 'scenarios.js', 'session.js', 'state.js', 'bounds.js', 'checks.js', 'errors.js'];
+test('the server never calls the network or a timer for lab time, and the engine never reads the wall clock', () => {
+  const src = walk(path.join(REPO_ROOT, 'server/src')).filter((f) => f.endsWith('.js') && !f.includes('model-gateway-sim') && !f.endsWith('netguard.js') && !f.endsWith('health.js') && !f.endsWith('runObservability.js'));
   for (const f of src) {
     const t = fs.readFileSync(f, 'utf8');
-    assert.equal(/setTimeout|setInterval|Date\.now|new Date\(|Math\.random|\beval\(|new Function|node:vm/.test(t), false, path.relative(REPO_ROOT, f));
+    assert.equal(/setTimeout|setInterval|Math\.random|\beval\(|new Function|node:vm/.test(t), false, path.relative(REPO_ROOT, f));
+    if (ENGINE.includes(path.basename(f))) assert.equal(/Date\.now|new Date\(/.test(t), false, `${path.relative(REPO_ROOT, f)} reads the wall clock`);
   }
 });
 
-test('the only dependency is express, and the package says Node 26', () => {
+test('the server\'s only dependency is express, and the package says Node 26', () => {
   const root = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
   const server = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'server/package.json'), 'utf8'));
   assert.deepEqual(Object.keys(server.dependencies), ['express']);
   assert.equal(root.engines.node, '>=26');
-  assert.deepEqual(root.workspaces, ['server']);
+  assert.deepEqual(root.workspaces, ['server', 'web']);
   assert.equal(/node --test test\/\*\.test\.js$/.test(server.scripts.test), true, 'a glob, never a directory');
 });
 

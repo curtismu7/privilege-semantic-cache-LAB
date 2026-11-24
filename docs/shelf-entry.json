@@ -1,0 +1,26 @@
+{
+  "demos": [
+    {
+      "id": "privilege-semantic-cache-lab",
+      "name": "Privilege Semantic Cache LAB",
+      "kind": "Demo",
+      "description": "Per-key semantic caching: a similar prompt is answered from the key's cache (HIT with its score against the strictness, TTL on a lab clock, Usage: Requests, From cache, Saved). Nine scenarios. Mock only; the encoder is a stand-in, not a real embedding model; the rest is UNVERIFIED.",
+      "url": "http://localhost:7847",
+      "healthPath": "/api/health",
+      "composeFile": "privilege-semantic-cache-LAB/docker-compose.yml",
+      "composeOverlays": [],
+      "pingProducts": [],
+      "notes": "Host-run: ./scripts/run.sh (port 7847, PROVISIONAL: claimed provisionally, not registered on the board). Mock needs no tenant and no credentials; Real is not built (the toggle is disabled with the reason). Docker: HOST_PORT=7847 docker compose up --build -d (published on 127.0.0.1 only). catalogId D000 is a placeholder: the owner assigns the real catalog id and the port before the registry entry is made. Repo: curtismu7/privilege-semantic-cache-LAB.",
+      "repo": "https://github.com/curtismu7/privilege-semantic-cache-LAB",
+      "catalogId": "D000",
+      "alsoCatalogIds": [],
+      "tags": [
+        "pingone-privilege",
+        "agent-controls",
+        "simulated"
+      ],
+      "where": "installed",
+      "addedAt": "2026-11-24"
+    }
+  ]
+}

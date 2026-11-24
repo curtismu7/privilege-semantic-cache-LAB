@@ -1,0 +1,8 @@
+{
+  "id": "S03",
+  "scenario": "unrelated-misses",
+  "title": "An unrelated prompt is a miss",
+  "goal": "For {{castBrand}}, {{castOwner}} needs to know the cache never answers a question with the answer to a different one.",
+  "obstacle": "A cache that matched too loosely would return a wrong answer to {{castApp}}.",
+  "control": "A prompt about something else scores near zero, falls below the strictness and goes to the model; its answer is stored on its own."
+}

@@ -1,0 +1,8 @@
+{
+  "id": "S07",
+  "scenario": "two-keys-never-share",
+  "title": "Two keys with different embedding settings never share an answer",
+  "goal": "{{castBrand}} runs more than one LLM key, each with its own embedding model and vector Redis.",
+  "obstacle": "If keys shared answers, one team's cached answer could be served to another key.",
+  "control": "In the lab each key compares only with entries made by that key, with that embedding model, in that store. Whether the product also scopes by user is an open question the lab does not answer."
+}

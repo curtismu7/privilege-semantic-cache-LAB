@@ -1,0 +1,8 @@
+{
+  "id": "S01",
+  "scenario": "exact-repeat-hits",
+  "title": "An exact repeat is answered from the cache",
+  "goal": "For {{castBrand}}, {{castApp}} asks the same question again and again while {{castTask}}, and each ask costs a model call.",
+  "obstacle": "Without a cache every repeat goes to the model, and the Usage view would show a request each time and nothing saved.",
+  "control": "The key's cache answers the repeat itself: the score is 1, the model is not called, and Usage shows From cache and Saved (the lab counts the stored answer's output tokens)."
+}

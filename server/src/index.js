@@ -16,5 +16,5 @@ if (!allPassed(checks)) {
 const host = assertBindAllowed(bindHost(), process.env);
 const app = createApp();
 const { url } = await startHttpServer({ port: resolvePort(), host, app });
-console.log(`[privilege-semantic-cache-lab] API at ${url}api/ (Mock only; bound to ${host}; port 7840 is PROVISIONAL, not claimed yet; no outbound call)`);
+console.log(`[privilege-semantic-cache-lab] page at ${url} (when built: npm run build), API at ${url}api/ (Mock only; bound to ${host}; port 7847 is PROVISIONAL, claimed provisionally and not registered on the board; no outbound call)`);
 console.log(`[privilege-semantic-cache-lab] health: ${url}api/health`);
