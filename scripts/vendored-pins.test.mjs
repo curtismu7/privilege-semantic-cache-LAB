@@ -14,6 +14,7 @@ const sha = (p) => crypto.createHash('sha256').update(fs.readFileSync(p)).digest
 // pin file -> the folder its files live in. A pin line is `<hash>  <file>`, or `<hash>  shared/.../<file>`; gatewayTrace.js lives in server/src.
 const GROUPS = [
   { pin: 'web/src/top-menu/top-menu.sha256', dir: 'web/src/top-menu', files: ['TopMenu.jsx', 'top-menu.css'], extra: ['ReleaseNotes.jsx'] },
+  { pin: 'web/src/top-menu/release-notes.sha256', dir: 'web/src/top-menu', files: ['ReleaseNotes.jsx'] }, // the shared dialog is never shown (App.jsx passes onVersion), but it is vendored and pinned
   { pin: 'web/src/floating-dialog/floating-dialog.sha256', dir: 'web/src/floating-dialog', files: ['FloatingDialog.jsx', 'floating-dialog.css', 'floating-dialog.test.jsx', 'geometry.js', 'useFloatingPanel.js'] },
   { pin: 'web/src/diagram-kit/diagram-kit.sha256', dir: 'web/src/diagram-kit', files: ['DiagramKit.jsx', 'DiagramKit.test.jsx', 'diagram-kit.css', 'diagramKit.js', 'diagramKit.test.js'] },
   { pin: 'web/src/gateway-trace/gateway-trace.sha256', dir: 'web/src/gateway-trace', files: ['GatewayTrace.jsx', 'gateway-trace.css', 'gateway-trace.test.jsx'], server: { 'gatewayTrace.js': 'server/src/gatewayTrace.js' } },

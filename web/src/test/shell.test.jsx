@@ -185,4 +185,24 @@ describe("shell: banner, mode toggle, presenter, talk track, reset", () => {
     expect(SERVER_PATTERN.source).toBe("^[a-z0-9][a-z0-9-]{0,31}$");
     expect((await h.lab.json("/api/key")).config).toBeTruthy();
   });
+
+  it("the version button opens THIS lab's own notes, never another lab's release notes", async () => {
+    const user = await h.mount();
+    await user.click(screen.getByTestId("version"));
+    const about = await screen.findByTestId("about-text");
+    expect(document.querySelector("[data-testid='release-notes']")).toBeNull();
+    for (const text of [about.textContent, document.body.textContent]) {
+      expect(text).not.toMatch(/Token Workbench/);
+      expect(text).not.toMatch(/JWKS|introspection|FAPI/i);
+    }
+    expect(about).toHaveTextContent(/Mock only/);
+    expect(about).toHaveTextContent(/not a real embedding model/);
+    expect(about).toHaveTextContent(/UNVERIFIED/);
+    expect(about).toHaveTextContent(/Real mode is not built yet/);
+    const info = await h.lab.json("/api/info");
+    for (const claim of info.sourced) expect(about).toHaveTextContent(claim);
+    await user.click(screen.getByTestId("about-limits-link"));
+    await waitFor(() => expect(window.location.hash).toBe("#limits"));
+    await screen.findByTestId("limits-sourced");
+  });
 });

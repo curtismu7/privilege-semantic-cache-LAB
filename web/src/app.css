@@ -203,3 +203,7 @@ a.button:hover { border-color: var(--accent); }
 .ro-table th:nth-child(4) { width: 14%; } .ro-table th:nth-child(6) { width: 13%; }
 
 .nomr .tag { margin-right: 0; }
+
+.about h2 { font-size: 17px; margin: 4px 0 8px; overflow-wrap: anywhere; }
+.about p, .about ul { margin: 8px 0; line-height: 1.5; font-size: 14px; }
+.about ul { padding-left: 20px; }
