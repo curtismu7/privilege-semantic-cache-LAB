@@ -38,7 +38,7 @@ Node 26. Heavy work on the Air: `air-test . -- npm test` (git add new files firs
 **7847 is PROVISIONAL**: claimed provisionally, not registered on the board and not in the shelf registry yet. Set `PORT` (7800-7999) to move it.
 
 ## Workspaces and branding
-Each browser tab sends `X-Workspace` (default `default`); the key, its cache, the lab clock, the last run and the run log are per workspace (at most 20; the least recently used is forgotten), and Reset clears one. `customer.config.json` (git-ignored; see `customer.config.example.json`) sets the lab's name, tagline, vertical and the five cast words; a bad field falls back to its default with a warning.
+Each browser tab sends `X-Workspace` (default `default`); the key, its cache, the lab clock, the last run and the run log are per workspace (at most 20; the least recently used is forgotten), and Reset clears one. When the cap forgets a tab's workspace (or the server restarts), the server marks the rebuilt workspace (`X-Workspace-Fresh: 1`) and the page says so in a banner and shows the defaults. `customer.config.json` (git-ignored; see `customer.config.example.json`) sets the lab's name, tagline, vertical and the five cast words; a bad field falls back to its default with a warning.
 
 ## Scenarios
 `GET /api/scenarios`; run one with `POST /api/scenario/:id`: exact-repeat-hits, paraphrase-hits-with-score, unrelated-misses, strictness-flips-the-pair, ttl-expiry-misses, usage-matches-calls, two-keys-never-share, guard-blocked-not-cached, store-outage-named-error. Each carries a hand-written expected result, and the UI shows whether the run equals it. The cross-user case is deliberately not a scenario.

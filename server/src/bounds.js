@@ -7,5 +7,6 @@ export const BOUNDS = Object.freeze({
   maxAdvanceMs: 7 * 24 * 3_600_000,
   maxStores: 3,
   maxRunsKept: 20,
-  maxBodyBytes: 128 * 1024,       // 20000 characters, all escaped, still fit
+  maxBodyBytes: 128 * 1024,       // 20000 characters, all escaped (6 bytes each as \u00XX), still fit
+  maxSimilarityBodyBytes: 2 * 20000 * 6 + 1024, // POST /api/similarity takes TWO prompts
 });

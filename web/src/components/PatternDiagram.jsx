@@ -16,7 +16,7 @@ const HANDLES = [["t", Position.Top], ["b", Position.Bottom], ["l", Position.Lef
 
 function Box({ data }) {
   // Keyboard: the box is a button (Tab to it, Enter or Space opens and closes its details). Moving a box is by mouse or touch only.
-  const key = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); data.toggle?.(); } };
+  const key = (e) => { if (e.target !== e.currentTarget) return; /* a button inside the expanded box keeps its own keys */ if (e.key === "Enter" || e.key === " ") { e.preventDefault(); data.toggle?.(); } };
   return (
     <div className={`pat-node${data.passport ? " dk-open" : ""}`} data-kind={data.kind} data-on={data.on ? "true" : "false"} data-testid={`pat-node-${data.id}`} role="button" tabIndex={0} aria-expanded={!!data.passport} aria-label={`${data.label}: show details`} onKeyDown={key}>
       {HANDLES.map(([k, pos]) => (

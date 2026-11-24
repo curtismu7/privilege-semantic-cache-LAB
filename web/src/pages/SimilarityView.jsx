@@ -40,10 +40,10 @@ export default function SimilarityView({ embeddingModel, strictness, setStrictne
       </div>
       <div className="pair">
         <label>An earlier prompt (in the cache)
-          <textarea rows={2} value={a} onChange={(e) => { setA(e.target.value); setScore(undefined); }} maxLength={limits.maxPromptChars + 1000} data-testid="pair-a" />
+          <textarea rows={2} value={a} onChange={(e) => { setA(e.target.value); setScore(undefined); latest.current += 1; setBusy(false); }} maxLength={limits.maxPromptChars + 1000} data-testid="pair-a" />
         </label>
         <label>A new prompt
-          <textarea rows={2} value={b} onChange={(e) => { setB(e.target.value); setScore(undefined); }} maxLength={limits.maxPromptChars + 1000} data-testid="pair-b" />
+          <textarea rows={2} value={b} onChange={(e) => { setB(e.target.value); setScore(undefined); latest.current += 1; setBusy(false); }} maxLength={limits.maxPromptChars + 1000} data-testid="pair-b" />
         </label>
       </div>
       <div className="seg">

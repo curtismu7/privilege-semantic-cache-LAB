@@ -46,7 +46,14 @@ describe("Semantic cache page: empty state and scenarios", () => {
       });
       expect(screen.getAllByTestId(/^check-\d+$/)).toHaveLength(s.expect.length);
       for (let i = 0; i < s.expect.length; i++) expect(screen.getByTestId(`check-${i}`)).toHaveTextContent(/yes$/);
-      // the live key is untouched by a scenario
+      // the scenario shows its OWN Usage; the live key is untouched by it
+      const own = want.result.usage;
+      const keys = Object.keys(own);
+      if (keys.length === 1) {
+        expect([text("scenario-usage-requests"), text("scenario-usage-from-cache"), text("scenario-usage-saved")]).toEqual([String(own[keys[0]].requests), String(own[keys[0]].fromCache), String(own[keys[0]].saved)]);
+      } else {
+        for (const k of keys) expect(screen.getByTestId(`scenario-usage-key-${k}`)).toHaveTextContent(new RegExp(`^${k}${own[k].requests}${own[k].fromCache}${own[k].saved}$`));
+      }
       expect(text("usage-requests")).toBe("0");
     });
   }
@@ -256,5 +263,48 @@ describe("Similarity view: a slow older answer never overwrites a newer one", ()
       await new Promise((r) => setTimeout(r, 400));
       expect(Number(/Score (\d\.\d{3})/.exec(text("pair-bar-words"))[1])).toBeGreaterThan(0.8);
     } finally { globalThis.fetch = realFetch; }
+  });
+});
+
+describe("Scenario Usage and late answers", () => {
+  it("S06's numbers are on screen: the scenario's own Usage card says Requests 5, From cache 3, Saved 165, above the live key's zero card", async () => {
+    const user = await h.mount();
+    await user.click(await screen.findByTestId("scenario-usage-matches-calls"));
+    await screen.findByTestId("scenario-result");
+    expect([text("scenario-usage-requests"), text("scenario-usage-from-cache"), text("scenario-usage-saved")]).toEqual(["5", "3", "165"]);
+    expect(text("scenario-usage")).toMatch(/Usage in this scenario/);
+    expect([text("usage-requests"), text("usage-saved")]).toEqual(["0", "0"]);
+    expect(screen.getByTestId("scenario-usage").compareDocumentPosition(screen.getByTestId("usage")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("a run that answers after a Reset is dropped: the page stays at 'No run yet'", async () => {
+    let release;
+    const gate = new Promise((r) => { release = r; });
+    const user = await h.mount({ overrides: { "/api/scenario/exact-repeat-hits": (_i, _u, go) => gate.then(() => go()) } });
+    await user.click(await screen.findByTestId("scenario-exact-repeat-hits"));
+    await user.click(screen.getByTestId("reset"));
+    await screen.findByTestId("result-empty");
+    release();
+    await new Promise((r) => setTimeout(r, 500));
+    expect(screen.queryByTestId("verdict")).toBeNull();
+    expect(screen.getByTestId("result-empty")).toBeInTheDocument();
+  });
+
+  it("when the server forgot this tab's workspace the page says so, shows the defaults again, and a Reset of its own does not trigger it", async () => {
+    const user = await h.mount();
+    await run(user, "Something stored before the server forgets");
+    await waitFor(() => expect(text("usage-requests")).toBe("1"));
+    // out of band: the server drops this workspace (the cap, a restart)
+    await fetch(`${h.lab.base}/api/reset`, { method: "POST", headers: { "content-type": "application/json", "x-workspace": h.lab.ws() }, body: "{}" });
+    await user.click(screen.getByTestId("scenario-unrelated-misses"));
+    expect(await screen.findByTestId("workspace-forgotten")).toHaveTextContent(/The server forgot this workspace; the lab was reset to its defaults/);
+    await waitFor(() => expect(text("usage-requests")).toBe("0"));
+    await user.click(screen.getByTestId("workspace-forgotten-dismiss"));
+    expect(screen.queryByTestId("workspace-forgotten")).toBeNull();
+    // this tab's own Reset empties the workspace on purpose: no banner
+    await user.click(screen.getByTestId("reset"));
+    await screen.findByTestId("result-empty");
+    await run(user, "After the tab's own reset");
+    expect(screen.queryByTestId("workspace-forgotten")).toBeNull();
   });
 });

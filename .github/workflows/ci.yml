@@ -45,6 +45,8 @@ jobs:
         run: node scripts/validate-content-pack.mjs
 
   forbidden-strings:
+    # A fork's pull request cannot read the repo secret: the job would fail for a reason that is not the contributor's.
+    if: github.event.pull_request.head.repo.fork != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

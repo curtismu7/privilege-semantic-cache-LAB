@@ -56,6 +56,26 @@ describe("Limits page: what the release notes say versus the lab's model", () =>
   });
 });
 
+describe("Diagram boxes: keys", () => {
+  it("a key press inside an expanded box (on a button) does not toggle the box; on the box itself Enter and Space do", async () => {
+    const user = await h.mount({ page: "diagram" });
+    const box = await screen.findByTestId("pat-node-gw");
+    box.focus();
+    await user.keyboard("{Enter}");
+    expect(box).toHaveAttribute("aria-expanded", "true");
+    const go = box.querySelector(".dk-passport-go"); // (a role=button box hides its children from the role queries)
+    expect(go).toBeTruthy();
+    go.focus();
+    const ev = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    go.dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(false); // the box did not swallow the button's key
+    expect(screen.getByTestId("pat-node-gw")).toHaveAttribute("aria-expanded", "true");
+    box.focus();
+    await user.keyboard(" ");
+    expect(screen.getByTestId("pat-node-gw")).toHaveAttribute("aria-expanded", "false");
+  });
+});
+
 describe("Diagram page: drawn from diagram-studio data by name", () => {
   it("draws exactly the boxes the data lists, asks the server for it by name, and Simulate walks the arrows", async () => {
     const user = await h.mount({ page: "diagram" });

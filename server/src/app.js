@@ -61,11 +61,19 @@ export function createApp({
     next();
   });
   app.use(jsonWritesOnly);
+  // POST /api/similarity takes two prompts, so its body may be twice as large; it is parsed first, with its own limit.
+  app.use('/api/similarity', express.json({ limit: BOUNDS.maxSimilarityBodyBytes, strict: true }));
   app.use(express.json({ limit: BOUNDS.maxBodyBytes, strict: true }));
 
   const workspaces = createWorkspaces({ build: () => createLabState() });
   // The workspace of a request: a bad X-Workspace is a 400 with a message, never silently the default.
-  const wsOf = (req) => workspaces.get(workspaceFrom(req));
+  // A workspace this call had to build is announced with X-Workspace-Fresh: 1, so a tab that already used its id can tell that the server forgot it
+  // (the 20-workspace cap, a restart) and say so instead of silently showing defaults.
+  const wsOf = (req, res) => {
+    const { ws, created } = workspaces.acquire(workspaceFrom(req));
+    if (created) res.set('X-Workspace-Fresh', '1');
+    return ws;
+  };
 
   app.use('/api/health', health.router);
 
@@ -81,7 +89,7 @@ export function createApp({
   }
 
   app.get('/api/info', (req, res) => {
-    const ws = wsOf(req);
+    const ws = wsOf(req, res);
     res.json({
       app: 'privilege-semantic-cache-lab', version, tier: 'Demo',
       source: 'mock', mode: 'mock', realAvailable: false, realReason: NOT_REAL,
@@ -107,7 +115,7 @@ export function createApp({
 
   // A scenario runs on its own lab, never on the workspace's key. Its runs leave the same traces and records as a live run.
   app.post('/api/scenario/:id', (req, res) => {
-    const ws = wsOf(req);
+    const ws = wsOf(req, res);
     const sc = findScenario(req.params.id);
     if (!sc) return res.status(404).json({ error: 'unknown_scenario', message: 'no such scenario' });
     const out = runScenario(sc.id);
@@ -124,24 +132,24 @@ export function createApp({
     };
   };
 
-  app.get('/api/key', (req, res) => res.json(keyView(wsOf(req))));
+  app.get('/api/key', (req, res) => res.json(keyView(wsOf(req, res))));
 
   app.put('/api/key', (req, res) => {
-    const ws = wsOf(req);
+    const ws = wsOf(req, res);
     const config = ws.session.key().setConfig(onlyFields(req.body, ['embeddingModel', 'vectorRedis', 'strictness', 'ttlMs'], 'key config'));
     res.json({ ...keyView(ws), config });
   });
 
   // The two controls the web page adds to the engine's own: a vector store outage, and the mock provider's state (what the next miss meets).
   app.put('/api/store', (req, res) => {
-    const ws = wsOf(req);
+    const ws = wsOf(req, res);
     const b = onlyFields(req.body, ['store', 'available'], 'store');
     ws.session.setStore(b.store, b.available);
     res.json(keyView(ws));
   });
 
   app.put('/api/provider', (req, res) => {
-    const ws = wsOf(req);
+    const ws = wsOf(req, res);
     const b = onlyFields(req.body, ['state'], 'provider');
     ws.session.setProviderState(b.state);
     res.json(keyView(ws));
@@ -149,7 +157,7 @@ export function createApp({
 
   // A pair's score, read only: no lookup, no store, no Usage, no clock. It lets the page show the same pair against any strictness.
   app.post('/api/similarity', (req, res) => {
-    const ws = wsOf(req);
+    const ws = wsOf(req, res);
     const b = onlyFields(req.body, ['a', 'b', 'embeddingModel'], 'similarity');
     validatePrompt(b.a); validatePrompt(b.b);
     const model = b.embeddingModel === undefined ? ws.session.key().getConfig().embeddingModel : b.embeddingModel;
@@ -160,7 +168,7 @@ export function createApp({
   });
 
   app.post('/api/run', (req, res) => {
-    const ws = wsOf(req);
+    const ws = wsOf(req, res);
     const b = onlyFields(req.body, ['prompt', 'guardBlocked'], 'run');
     if (b.guardBlocked !== undefined && typeof b.guardBlocked !== 'boolean') throw invalidRequest('guardBlocked must be true or false');
     const s = ws.session;
@@ -170,13 +178,13 @@ export function createApp({
   });
 
   app.post('/api/clock/advance', (req, res) => {
-    const ws = wsOf(req);
+    const ws = wsOf(req, res);
     const b = onlyFields(req.body, ['ms'], 'advance');
     res.json({ clockMs: ws.session.advance(b.ms) });
   });
 
   app.get('/api/usage', (req, res) => {
-    const s = wsOf(req).session;
+    const s = wsOf(req, res).session;
     res.json({ ...usageView(s.key()), clockMs: s.lab.clock.now() });
   });
 
@@ -199,7 +207,7 @@ export function createApp({
   // Rule 27: what the last run of this workspace left behind. null before any run.
   app.get('/api/run-observability', async (req, res, next) => {
     try {
-      const ws = wsOf(req);
+      const ws = wsOf(req, res);
       res.json({ record: await buildRunRecord(ws.lastRun, { clock: now }), run: ws.lastRun ? { id: ws.lastRun.id, kind: ws.lastRun.kind, scenarioId: ws.lastRun.scenarioId } : null, streams: STREAMS, maxRuns: MAX_RUNS });
     } catch (e) { next(e); }
   });

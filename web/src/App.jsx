@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import TopMenu, { applyFontSize } from "./top-menu/TopMenu.jsx";
 import TalkTrackDialog from "./talk-track/TalkTrackDialog.jsx";
 import ModeToggle from "./components/ModeToggle.jsx";
@@ -9,6 +9,7 @@ import DiagramPage from "./pages/DiagramPage.jsx";
 import StoriesPage from "./pages/StoriesPage.jsx";
 import LimitsPage from "./pages/LimitsPage.jsx";
 import { visible } from "./safeText";
+import { FORGOTTEN_EVENT } from "./workspace";
 
 export const PAGES = [
   { id: "cache", label: "Semantic cache", View: CachePage },
@@ -43,8 +44,13 @@ export default function App() {
   const [theme, setTheme] = useState(initialTheme);
   const [fontStep, setFontStep] = useState(initialFont);
   const [resetMsg, setResetMsg] = useState("");
+  const [forgotten, setForgotten] = useState(false);
+  const forgottenRef = useRef(lab.workspaceForgotten);
+  forgottenRef.current = lab.workspaceForgotten;
 
   useEffect(() => { if (theme === "auto") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = theme; }, [theme]);
+  // The server forgot this tab's workspace (the 20-workspace cap, a restart) and built a fresh one: say so, and show the defaults.
+  useEffect(() => { const on = () => { setForgotten(true); forgottenRef.current(); }; window.addEventListener(FORGOTTEN_EVENT, on); return () => window.removeEventListener(FORGOTTEN_EVENT, on); }, []);
   useEffect(() => { applyFontSize(fontStep); try { localStorage.setItem(FONT_KEY, fontStep); } catch { /* not remembered */ } }, [fontStep]);
   useEffect(() => { const on = () => setPage(pageFromHash()); window.addEventListener("hashchange", on); return () => window.removeEventListener("hashchange", on); }, []);
   useEffect(() => {
@@ -67,6 +73,7 @@ export default function App() {
   const pickVertical = (v) => { clearScenarioHash(); lab.setVertical(v); };
   const reset = async () => {
     clearScenarioHash();
+    setForgotten(false);
     const ok = await lab.reset();
     setResetMsg(ok ? "Reset: the key is back to its default config with an empty cache, the lab clock is at zero, every store is back on, the last run is cleared and the diagram is back in place." : "Reset failed on the server; the view was reloaded.");
   };
@@ -110,6 +117,11 @@ export default function App() {
             <button type="button" onClick={lab.reload} data-testid="retry">Try again</button>
           </div>
         )}
+        {forgotten && (
+          <p className="reset-note" role="status" data-testid="workspace-forgotten">
+            The server forgot this workspace; the lab was reset to its defaults. <button type="button" onClick={() => setForgotten(false)} data-testid="workspace-forgotten-dismiss">Dismiss</button>
+          </p>
+        )}
         <p className={resetMsg ? "reset-note" : "sr-only"} role="status" aria-live="polite" data-testid="reset-note">{resetMsg}</p>
         {!presenter && <div className="page-head"><p className="head__intro" data-testid="head-intro">{PAGE_INTRO[page]}</p></div>}
         {presenter && <PresenterSay say={say} heading={null} />}
@@ -117,7 +129,7 @@ export default function App() {
           {lab.error && !story ? null : !story || !info ? <p className="muted" role="status">Loading...</p> : <View key={`${page}-${lab.epoch}`} lab={lab} />}
         </div>
       </main>
-      <TalkTrackDialog isOpen={talkOpen} onClose={() => setTalkOpen(false)} talk={story?.talkTrack ?? []} />
+      <TalkTrackDialog isOpen={talkOpen} onClose={() => setTalkOpen(false)} talk={(story?.talkTrack ?? []).map((t) => ({ ...t, title: visible(t.title), say: visible(t.say) }))} />
     </div>
   );
 }

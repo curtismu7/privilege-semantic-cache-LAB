@@ -22,11 +22,11 @@ The cache scope is an open question, not an answer: whether the cache is per key
 
 ## S01: An exact repeat is answered from the cache
 
-Run the first scenario: {{castApp}} asks the same question twice while {{castTask}}. The first ask is a miss and goes to the model; the second scores 1 and is answered from the cache with no model call. Point at the Usage view: two requests, one from cache, and a Saved number in lab-model tokens.
+Run the first scenario: {{castApp}} asks the same question twice while {{castTask}}. The first ask is a miss and goes to the model; the second scores 1 and is answered from the cache with no model call. Point at the first Usage card, the scenario's own: two requests, one from cache, and a Saved number in lab-model tokens (the live key's Usage below it stays at zero, because a scenario runs on its own key).
 
 ## S02: A paraphrase above the strictness is a hit, and the score is shown
 
-Run the second scenario. The second wording is not the stored prompt, but it shares most of its text, so it scores high and is a hit. Say the score out loud, and the entry it matched. Remind the room that this stand-in measures shared text, not meaning.
+Run the second scenario. The second wording is not the stored prompt, but it shares most of its text, so it scores high and is a hit. Say the score out loud (it is in the Score column of the steps table). Remind the room that this stand-in measures shared text, not meaning.
 
 ## S03: An unrelated prompt is a miss
 
@@ -42,7 +42,7 @@ Run the fifth scenario. The answer is stored at lab time 400 ms and expires at 6
 
 ## S06: The Usage view matches the calls
 
-Run the sixth scenario: five calls, three of them from the cache. Requests 5, From cache 3, Saved 165 lab-model tokens. Say that how the product computes Saved is not in the release notes; the lab counts the stored answer's output tokens and labels the unit UNVERIFIED.
+Run the sixth scenario: five calls, three of them from the cache. The scenario's own Usage card reads Requests 5, From cache 3, Saved 165 lab-model tokens. Say that how the product computes Saved is not in the release notes; the lab counts the stored answer's output tokens and labels the unit UNVERIFIED.
 
 ## S07: Two keys with different embedding settings never share an answer
 
@@ -50,8 +50,8 @@ Run the seventh scenario. Three keys ask the same prompt; each misses once and t
 
 ## S08: A prompt the guard blocked never enters the cache
 
-Run the eighth scenario. The guard blocks the prompt: no lookup, no model call, nothing stored, no Usage. The same text sent again, unblocked, is a miss because it was never cached. Say that the lab runs the guard first and that the product's order is UNVERIFIED.
+Run the eighth scenario. The guard blocks the prompt: the first step counted nothing and stored nothing, and the scenario's Usage card ends at two requests (the later miss and hit), not three. The same text sent again, unblocked, is a miss because it was never cached. Say that the lab runs the guard first and that the product's order is UNVERIFIED.
 
 ## S09: The vector store is down and the error has a name
 
-Run the ninth scenario, or switch the store off yourself and run a prompt. The result is a named error with no model call and no Usage. Say that what the product does in an outage is UNVERIFIED; the lab claims neither fail-open nor fail-closed.
+Run the ninth scenario, or switch the store off yourself and run a prompt. The outage step is a named error with no model call, and the scenario's Usage card shows two requests: the outage run was not counted. Say that what the product does in an outage is UNVERIFIED; the lab claims neither fail-open nor fail-closed.

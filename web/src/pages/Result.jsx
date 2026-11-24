@@ -15,17 +15,37 @@ const OBS_NOTE = "In this lab: Agent is the calling app, Privilege is the lab's 
 export const OutcomeChip = ({ outcome, testId }) => { const [state, word] = OUTCOME[outcome] || ["none", String(outcome).toUpperCase()]; return <Chip state={state} testId={testId}>{word}</Chip>; };
 
 // Requests, From cache and Saved: the Usage view (release notes). The unit of Saved is the lab's own and says so.
-export function Usage({ usage, clockMs, scope, savedUnit }) {
+export function Usage({ usage, clockMs, scope, savedUnit, idPrefix = "usage" }) {
   return (
-    <section className="card" data-testid="usage" aria-label="Usage">
+    <section className="card" data-testid={idPrefix} aria-label={scope || "Usage"}>
       <p className="kicker">{scope || "Usage of the live key"}</p>
       <h2 className="card__title">Usage</h2>
       <div className="card-grid card-grid--stats">
-        <div className="stat"><span className="muted">Requests</span><span className="stat__n" data-testid="usage-requests">{usage.requests}</span></div>
-        <div className="stat"><span className="muted">From cache</span><span className="stat__n" data-testid="usage-from-cache">{usage.fromCache}</span></div>
-        <div className="stat"><span className="muted">Saved</span><span className="stat__n" data-testid="usage-saved">{usage.saved}</span></div>
+        <div className="stat"><span className="muted">Requests</span><span className="stat__n" data-testid={`${idPrefix}-requests`}>{usage.requests}</span></div>
+        <div className="stat"><span className="muted">From cache</span><span className="stat__n" data-testid={`${idPrefix}-from-cache`}>{usage.fromCache}</span></div>
+        <div className="stat"><span className="muted">Saved</span><span className="stat__n" data-testid={`${idPrefix}-saved`}>{usage.saved}</span></div>
       </div>
-      <p className="muted" data-testid="usage-unit">Saved is counted in {visible(savedUnit || usage.savedUnit)}.{clockMs !== undefined ? ` Lab clock: ${ms(clockMs)}.` : ""}</p>
+      <p className="muted" data-testid={`${idPrefix}-unit`}>Saved is counted in {visible(savedUnit || usage.savedUnit)}.{clockMs !== undefined ? ` Lab clock: ${ms(clockMs)}.` : ""}</p>
+    </section>
+  );
+}
+
+// The Usage a played scenario ended with: its own fresh keys, not the live key. One key shows the same three numbers; several keys show one row each.
+export function ScenarioUsage({ usage, savedUnit }) {
+  const keys = Object.entries(usage);
+  if (keys.length === 1) return <Usage usage={keys[0][1]} scope={`Usage in this scenario (its own fresh key ${keys[0][0]})`} savedUnit={savedUnit} idPrefix="scenario-usage" />;
+  return (
+    <section className="card" data-testid="scenario-usage" aria-label="Usage in this scenario">
+      <p className="kicker">Usage in this scenario (its own fresh keys)</p>
+      <h2 className="card__title">Usage</h2>
+      <div className="scroll">
+        <table className="tbl">
+          <caption className="sr-only">Usage per key in this scenario</caption>
+          <thead><tr><th scope="col">Key</th><th scope="col">Requests</th><th scope="col">From cache</th><th scope="col">Saved</th></tr></thead>
+          <tbody>{keys.map(([k, u]) => <tr key={k} data-testid={`scenario-usage-key-${k}`}><td>{visible(k)}</td><td>{u.requests}</td><td>{u.fromCache}</td><td>{u.saved}</td></tr>)}</tbody>
+        </table>
+      </div>
+      <p className="muted" data-testid="scenario-usage-unit">Saved is counted in {visible(savedUnit)}.</p>
     </section>
   );
 }
@@ -169,8 +189,9 @@ export default function Result({ last, usage, usageClock, savedUnit, scenarios, 
   return (
     <div className="stack" data-testid="result" data-run={runId} ref={top}>
       {last.kind === "scenario" ? <ScenarioResult played={last.played} def={def} /> : <Verdict out={last.out} prompt={last.prompt} />}
+      {last.kind === "scenario" && <ScenarioUsage usage={last.played.result.usage} savedUnit={savedUnit} />}
       {usageCard}
-      {last.kind === "scenario" && <p className="muted" data-testid="usage-note">Usage above is the live key's: a scenario counts its own calls and the live key is untouched.</p>}
+      {last.kind === "scenario" && <p className="muted" data-testid="usage-note">The scenario counted its own calls in the first Usage card; this one is the live key's and the scenario did not touch it.</p>}
       <GatewayTrace exchanges={trace?.exchanges || []} source="mock" title="What the gateway did (simulated)" basisNote={BASIS} hot={["error", "ok", "outcome", "servedBy", "similarity"]} />
       <RunObservability record={obs?.record ?? null} source={source} streams={obs?.streams || []} title="What this run left behind" />
       <p className="muted" data-testid="obs-note">{OBS_NOTE}</p>

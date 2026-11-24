@@ -22,6 +22,7 @@ export default function useLab() {
   const [busy, setBusy] = useState(false);
   const [epoch, setEpoch] = useState(0);
   const seq = useRef(0);
+  const gen = useRef(0); // goes up whenever the page starts over (Reset, a new vertical, a mode switch, a forgotten workspace): an older run that answers late is dropped
 
   const load = useCallback(async (v) => {
     const mine = ++seq.current; // a late answer for a vertical or a mode the visitor has left is dropped
@@ -34,13 +35,14 @@ export default function useLab() {
   }, []);
 
   useEffect(() => { load(undefined); }, [load]);
-  const setVertical = useCallback((v) => { setVerticalState(v); setEpoch((n) => n + 1); load(v); }, [load]);
+  const setVertical = useCallback((v) => { gen.current += 1; setVerticalState(v); setEpoch((n) => n + 1); load(v); }, [load]);
 
   // Rule 19: the server decides. A 409 (Real not available) is shown as the server worded it; nothing else changes.
   const switchMode = useCallback(async (source) => {
     if (source === info?.source) return { ok: true }; // pressing the mode that is already active changes nothing: no request, no reload, the last run stays
     const r = await setMode(source);
     if (!r.ok) { setModeError(r.body?.message || `The mode did not change (HTTP ${r.status})`); return { ok: false, message: r.body?.message }; }
+    gen.current += 1;
     setModeError(null); setLast(null); setObs(null); setEpoch((n) => n + 1);
     await load(vertical);
     return { ok: true };
@@ -54,8 +56,10 @@ export default function useLab() {
   // A run is data, a miss or an error included. Only a transport or validation failure (4xx/5xx on the request itself) is returned as { ok: false }.
   const runLive = useCallback(async (prompt, guardBlocked) => {
     setBusy(true);
+    const g = gen.current;
     try {
       const r = await postRun(prompt, guardBlocked);
+      if (g !== gen.current) return { ok: true, dropped: true }; // the page started over while this ran
       if (!r.ok) return { ok: false, status: r.status, message: say(r, "The run"), code: r.body?.error };
       const { runId, trace, ...out } = r.body;
       setLast({ kind: "live", out, prompt, runId, trace });
@@ -66,8 +70,10 @@ export default function useLab() {
 
   const runScenario = useCallback(async (id) => {
     setBusy(true);
+    const g = gen.current;
     try {
       const r = await postScenario(id);
+      if (g !== gen.current) return { ok: true, dropped: true };
       if (!r.ok) return { ok: false, status: r.status, message: say(r, "The scenario"), code: r.body?.error };
       const { runId, trace, ...played } = r.body;
       setLast({ kind: "scenario", id, played, runId, trace });
@@ -77,11 +83,15 @@ export default function useLab() {
   }, [refreshObs]);
 
   const reset = useCallback(async () => {
+    gen.current += 1;
     const r = await postReset();
     setLast(null); setObs(null); setEpoch((n) => n + 1);
     await load(vertical);
     return r.ok;
   }, [load, vertical]);
 
-  return { vertical, setVertical, info, story, source: info?.source || null, error, modeError, last, obs, busy, epoch, reload: () => load(vertical), switchMode, runLive, runScenario, reset };
+  // The server forgot this tab's workspace and built a fresh one: show defaults again (the page says why).
+  const workspaceForgotten = useCallback(() => { setLast(null); setObs(null); setEpoch((n) => n + 1); load(vertical); }, [load, vertical]);
+
+  return { workspaceForgotten, vertical, setVertical, info, story, source: info?.source || null, error, modeError, last, obs, busy, epoch, reload: () => load(vertical), switchMode, runLive, runScenario, reset };
 }

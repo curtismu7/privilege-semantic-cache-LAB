@@ -48,6 +48,8 @@ export function createVectorStores() {
     setAvailable(id, available) { get(id).available = Boolean(available); },
     isAvailable: (id) => get(id).available,
     size: (id) => get(id).entries.length,
+    // Entries still live at `now` (an entry whose TTL has passed is gone for every view, even before a lookup sweeps it).
+    liveSize: (id, now) => get(id).entries.filter((e) => isLive(e, now)).length,
     sweep(id, now) { const s = get(id); const before = s.entries.length; s.entries = s.entries.filter((e) => isLive(e, now)); return before - s.entries.length; },
     add(id, entry) {
       const s = get(id);
@@ -89,7 +91,7 @@ export function createKeyCache({ id, config = DEFAULT_CONFIG, clock, stores }) {
       let best = null;
       for (const e of store.entries) {
         if (e.keyId !== id || e.embeddingModel !== cfg.embeddingModel) continue;
-        const score = cosine(vec, e.vector);
+        const score = Math.max(0, cosine(vec, e.vector)); // a cosine below zero is reported as 0, so strictness 0 means "everything hits"
         if (best === null || score > best.score) best = { entry: e, score };
       }
       const hit = best !== null && best.score >= cfg.strictness;

@@ -93,3 +93,44 @@ test('POST /api/similarity is bounded: empty, over-long, no-letter prompts, unkn
     assert.equal((await lab.send('POST', '/api/similarity', { a: 'x'.repeat(BOUNDS.maxPromptChars), b: 'y'.repeat(BOUNDS.maxPromptChars) })).status, 200, 'prompts at the limit work');
   } finally { await lab.close(); }
 });
+
+test('after the TTL both views agree: the store card and GET /api/key say 0 live entries', async () => {
+  const lab = await startLab();
+  try {
+    await lab.send('POST', '/api/run', { prompt: 'Something to keep for a while' });
+    const before = (await lab.get('/api/key')).json;
+    assert.deepEqual([before.entries, before.stores.find((s) => s.id === 'vector-redis-a').entries], [1, 1]);
+    await lab.send('POST', '/api/clock/advance', { ms: 3_600_000 });
+    const after = (await lab.get('/api/key')).json;
+    assert.deepEqual([after.entries, after.stores.find((s) => s.id === 'vector-redis-a').entries], [0, 0]);
+  } finally { await lab.close(); }
+});
+
+test('POST /api/similarity takes two prompts at the limit even when every character is escaped (6 bytes each)', async () => {
+  const lab = await startLab();
+  try {
+    const p = `${'\u0001'.repeat(BOUNDS.maxPromptChars - 1)}a`;
+    assert.ok(JSON.stringify({ a: p, b: p }).length > BOUNDS.maxBodyBytes, 'more than the general body limit');
+    const r = await lab.send('POST', '/api/similarity', { a: p, b: p });
+    assert.equal(r.status, 200);
+    assert.equal(r.json.similarity, 1);
+    const big = await lab.send('POST', '/api/similarity', { a: p, b: p, extra: 'x'.repeat(BOUNDS.maxSimilarityBodyBytes) });
+    assert.equal(big.status, 413);
+    assert.equal((await lab.send('POST', '/api/run', { prompt: p })).status, 200, 'one prompt at the limit still fits the general limit');
+  } finally { await lab.close(); }
+});
+
+test('a workspace the server had to build is announced with X-Workspace-Fresh; a known one is not; after the cap forgets one it is announced again', async () => {
+  const lab = await startLab();
+  try {
+    const fresh = (r) => r.headers.get('x-workspace-fresh');
+    assert.equal(fresh(await lab.get('/api/key', { 'x-workspace': 'w0' })), '1');
+    assert.equal(fresh(await lab.get('/api/key', { 'x-workspace': 'w0' })), null);
+    for (let i = 1; i < 21; i++) await lab.get('/api/key', { 'x-workspace': `w${i}` }); // 21 others: the cap (20) forgets the least recently used, w0
+    assert.equal(fresh(await lab.get('/api/key', { 'x-workspace': 'w0' })), '1', 'w0 was forgotten and rebuilt');
+    assert.equal(fresh(await lab.get('/api/key', { 'x-workspace': 'w20' })), null, 'a recently used one stays');
+    // after a Reset the next call rebuilds on purpose (the page expects it)
+    await lab.send('POST', '/api/reset', {}, { 'x-workspace': 'w20' });
+    assert.equal(fresh(await lab.get('/api/key', { 'x-workspace': 'w20' })), '1');
+  } finally { await lab.close(); }
+});

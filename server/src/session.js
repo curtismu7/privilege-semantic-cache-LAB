@@ -27,7 +27,7 @@ export function createSession() {
       lab.stores.setAvailable(store, available);
       return this.stores();
     },
-    stores: () => STORE_IDS.map((id) => ({ id, available: lab.stores.isAvailable(id), entries: lab.stores.size(id) })),
+    stores: () => STORE_IDS.map((id) => ({ id, available: lab.stores.isAvailable(id), entries: lab.stores.liveSize(id, lab.clock.now()) })),
     setProviderState(state) {
       if (typeof state !== 'string' || !PROVIDER_STATES.includes(state)) throw invalidRequest(`state must be one of ${PROVIDER_STATES.join(', ')}`);
       lab.provider.setState(state);

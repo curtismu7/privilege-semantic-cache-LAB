@@ -28,4 +28,8 @@ Demo-tier standalone lab, step 2 (engine, API and web UI). The repo exists (`cur
 - The netguard allows a literal IP in `dns.lookup` (an opted-in bind); connecting to it is still blocked.
 - Shortcut keys ignore modifiers, repeats and focused controls.
 - Static scans skip `.github/` and the shared attribution script.
+- A box or button wrapper handles keys only when `e.target === e.currentTarget` (buttons inside an expanded box keep their own keys).
+- What the talk track says to point at must be what the page shows after that action (a scenario shows its own Usage card; the live key's Usage stays untouched).
+- A tab that has used its workspace id is told (`X-Workspace-Fresh`) when the server forgot it; after its own Reset the next call is fresh on purpose.
+- A late answer from a run started before a Reset, vertical change or mode switch is dropped.
 - A port is checked against running containers and compose files (`docker ps`; the ap-* labs use 7839 to 7843), not only the registry. This lab's ports are 7800-7999 and `resolvePort` enforces it.

@@ -16,7 +16,26 @@ export function workspaceId() {
   return memo;
 }
 
-export const workspaceFetch = (url, opts = {}) => fetch(url, { ...opts, headers: { "content-type": "application/json", ...(opts.headers || {}), "x-workspace": workspaceId() } });
+// The server announces a workspace it had to build with X-Workspace-Fresh: 1. A tab that has already used its id is told by that header that the server
+// forgot the workspace (the 20-workspace cap, a restart): the page says so and reloads its state. After this tab's own Reset the next call is fresh on purpose.
+export const FORGOTTEN_EVENT = "psc:workspace-forgotten";
+let seen = false;
+let expectFresh = false;
+export function noteResponse(res) {
+  const fresh = res?.headers?.get?.("x-workspace-fresh") === "1";
+  if (fresh) {
+    if (seen && !expectFresh && typeof window !== "undefined") window.dispatchEvent(new Event(FORGOTTEN_EVENT));
+    expectFresh = false;
+  }
+  if (res && res.status < 500) seen = true;
+}
+export const expectFreshWorkspace = () => { expectFresh = true; };
+
+export const workspaceFetch = async (url, opts = {}) => {
+  const res = await fetch(url, { ...opts, headers: { "content-type": "application/json", ...(opts.headers || {}), "x-workspace": workspaceId() } });
+  noteResponse(res);
+  return res;
+};
 
 // For tests: a new tab starts with a new id.
-export function forgetWorkspace() { memo = null; try { window.sessionStorage.removeItem(KEY); } catch { /* blocked */ } }
+export function forgetWorkspace() { memo = null; seen = false; expectFresh = false; try { window.sessionStorage.removeItem(KEY); } catch { /* blocked */ } }

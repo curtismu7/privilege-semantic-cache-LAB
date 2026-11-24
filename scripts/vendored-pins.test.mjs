@@ -17,6 +17,8 @@ const GROUPS = [
   { pin: 'web/src/floating-dialog/floating-dialog.sha256', dir: 'web/src/floating-dialog', files: ['FloatingDialog.jsx', 'floating-dialog.css', 'floating-dialog.test.jsx', 'geometry.js', 'useFloatingPanel.js'] },
   { pin: 'web/src/diagram-kit/diagram-kit.sha256', dir: 'web/src/diagram-kit', files: ['DiagramKit.jsx', 'DiagramKit.test.jsx', 'diagram-kit.css', 'diagramKit.js', 'diagramKit.test.js'] },
   { pin: 'web/src/gateway-trace/gateway-trace.sha256', dir: 'web/src/gateway-trace', files: ['GatewayTrace.jsx', 'gateway-trace.css', 'gateway-trace.test.jsx'], server: { 'gatewayTrace.js': 'server/src/gatewayTrace.js' } },
+  { pin: 'web/src/talk-track/talk-track.sha256', dir: 'web/src/talk-track', files: ['TalkTrackDialog.jsx'] },
+  { pin: 'server/test/vendored-server.sha256', dir: 'server/src', files: ['health.js', 'doctor.js'] }, // shared/health and shared/doctor
   { pin: 'web/src/components/JsonPane.sha256', dir: 'web/src/components', files: ['JsonPane.jsx'] },
 ];
 
