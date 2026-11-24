@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { test } from 'node:test';
-import { resolvePort } from '../server/src/safety.js';
+import { allowedExtraHosts, resolvePort } from '../server/src/safety.js';
 
 // null when the server accepts the port; the lab's ports live in the packed range 7800-7999.
 const portProblem = (p) => { try { resolvePort({ PORT: String(p) }); } catch (e) { return e.message; } return p >= 7800 && p <= 7999 ? null : `${p} is outside 7800-7999`; };
@@ -82,4 +82,10 @@ test('compose never mounts the Docker socket and passes no log-reader settings',
   const compose = here('docker-compose.yml');
   assert.doesNotMatch(compose, /docker\.sock/);
   assert.doesNotMatch(compose, /RUN_OBS_/);
+});
+
+test('LAB_ALLOWED_HOSTS defaults to the lab-proxy names (so the Host check does not answer 421 behind the proxy), every one a valid host name', () => {
+  const def = /LAB_ALLOWED_HOSTS: \$\{LAB_ALLOWED_HOSTS:-([^}]*)\}/.exec(here('docker-compose.yml'))[1].split(',').filter(Boolean);
+  assert.ok(def.includes('local.ping-devops.com') && def.includes('privilege-semantic-cache-lab.local.ping-devops.com'), `default is: ${def.join(',') || '(empty)'}`);
+  assert.equal(allowedExtraHosts({ LAB_ALLOWED_HOSTS: def.join(',') }).size, 2);
 });

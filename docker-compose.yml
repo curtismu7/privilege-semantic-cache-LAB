@@ -14,7 +14,7 @@ services:
     environment:
       PORT: "7847"
       PSC_BIND: 0.0.0.0
-      LAB_ALLOWED_HOSTS: ${LAB_ALLOWED_HOSTS:-}
+      LAB_ALLOWED_HOSTS: ${LAB_ALLOWED_HOSTS:-local.ping-devops.com,privilege-semantic-cache-lab.local.ping-devops.com}
     # volumes:
     #   - ./customer.config.json:/app/customer.config.json:ro
     read_only: true
