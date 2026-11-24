@@ -38,3 +38,21 @@ test('with a web build: / and any page path serve index.html (a missing asset is
     assert.equal((await lab.get('/..%2f..%2fpackage.json')).status === 200 && (await lab.get('/..%2f..%2fpackage.json')).text.includes('"workspaces"'), false, 'no path traversal out of dist');
   } finally { await lab.close(); fs.rmSync(dist, { recursive: true, force: true }); }
 });
+
+test('a lab installed under a dot-directory (~/.local, .cache, .worktrees) still serves the built page and its assets', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'psc-dot-'));
+  const dist = path.join(tmp, '.apps', 'lab', 'web', 'dist');
+  fs.mkdirSync(path.join(dist, 'assets'), { recursive: true });
+  fs.writeFileSync(path.join(dist, 'index.html'), '<!doctype html><title>t</title><div id="root"></div>');
+  fs.writeFileSync(path.join(dist, 'assets', 'a.js'), 'export {}');
+  const lab = await startLab({ distDir: dist });
+  try {
+    for (const p of ['/', '/some/page', '/#cache']) {
+      const r = await lab.get(p);
+      assert.equal(r.status, 200, p);
+      assert.match(r.text, /id="root"/, p);
+    }
+    assert.equal((await lab.get('/assets/a.js')).status, 200);
+    assert.equal((await lab.get('/assets/missing.js')).status, 404, 'a missing asset is still a 404, never the page');
+  } finally { await lab.close(); fs.rmSync(tmp, { recursive: true, force: true }); }
+});

@@ -233,7 +233,7 @@ export function createApp({
   const indexHtml = path.join(distDir, 'index.html');
   if (fs.existsSync(indexHtml)) {
     app.use(express.static(distDir, { index: false, fallthrough: true }));
-    app.get(/^\/(?!api(\/|$)|assets\/).*/, (_req, res) => res.sendFile(indexHtml)); // a missing /assets file is a 404, never the page (an HTML body parsed as a script is a silent blank page)
+    app.get(/^\/(?!api(\/|$)|assets\/).*/, (_req, res) => res.sendFile('index.html', { root: distDir })); // (a `root` keeps the dotfile check to the path INSIDE dist: a lab installed under ~/.local or a .worktrees directory still serves its page) // a missing /assets file is a 404, never the page (an HTML body parsed as a script is a silent blank page)
   }
   app.use((_req, res) => res.status(404).json({ error: 'not_found', message: 'Not found. The web page is not built here (npm run build); the API is under /api.' }));
 
