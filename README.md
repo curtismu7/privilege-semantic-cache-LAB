@@ -5,7 +5,7 @@
 **Status: step 2 of 3 (web UI, presenter mode, talk track, content pack, Docker).** Step 3 (shelf registry entry, proxy route, submodule pin, release) is the owner's integration step and is not done here.
 
 ## Simulated, and not
-- **Simulated:** the gateway, the embedding model, the vector Redis, the LLM provider, the guard and time. All of it runs in this process with no network call. The encoder is a deterministic stand-in (hashed character n-grams, cosine similarity) and is **not a real embedding model**: a paraphrase scores high here only when it reuses words. The banner on every page, presenter mode included, says so.
+- **Simulated:** the gateway, the embedding model, the vector Redis, the LLM provider, the guard and time. All of it runs in this process with no network call. The encoder is a deterministic stand-in (hashed character n-grams, cosine similarity) and is **not a real embedding model**: a paraphrase scores high here only when it reuses words. The Mock or Real modal that opens the page says so (once per browser session).
 - **Sourced** (2026-11-21 release notes only): each LLM key names its own embedding model and vector Redis, a match strictness and a TTL, and the Usage view shows Requests, From cache and Saved.
 - **UNVERIFIED (this lab's own model):** how Saved is computed, whether the cache is scoped by key only or also by user, whether the guard runs before or after the lookup, and what a Redis outage does. The per-user scope is shown as an open-question card with no result, never a scenario.
 

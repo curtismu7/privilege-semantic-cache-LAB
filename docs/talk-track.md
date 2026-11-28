@@ -6,7 +6,7 @@
 
 ## Before you start
 
-You are about to show per-key semantic caching: a similar prompt is answered from the key's cache, and the Usage view shows Requests, From cache and Saved. Say first what is sourced and what is not. The only claims taken from the 2026-11-21 release notes are these: each LLM key can name its own embedding model and its own vector Redis, sets a match strictness and a TTL, and the Usage view shows Requests, From cache and Saved. Everything else on the screen is this lab's own model and is labelled UNVERIFIED. The banner stays on screen in presenter mode too.
+You are about to show per-key semantic caching: a similar prompt is answered from the key's cache, and the Usage view shows Requests, From cache and Saved. Say first what is sourced and what is not. The only claims taken from the 2026-11-21 release notes are these: each LLM key can name its own embedding model and its own vector Redis, sets a match strictness and a TTL, and the Usage view shows Requests, From cache and Saved. Everything else on the screen is this lab's own model and is labelled UNVERIFIED. The Mock or Real modal opens first and says the same; close it with Got it.
 
 The story is told for {{castBrand}}, an invented example. The verticals change the words, not the engine and not the numbers.
 
