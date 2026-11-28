@@ -20,13 +20,13 @@ describe("Stories and talk track", () => {
       expect(text(`story-say-${s.id}`).length).toBeGreaterThan(60);
     }
     expect(document.body.textContent).not.toMatch(/\{\{/);
-    expect(text("stories-for")).toContain(VERTICALS.retail.cast.castBrand);
+    expect(text("stories-for")).toContain(VERTICALS.airlines.cast.castBrand);
     expect(within(screen.getByTestId("talk-general")).getByText("Before you start")).toBeInTheDocument();
     // another vertical changes the words, not the stories
     await user.selectOptions(screen.getByTestId("vertical-select"), "finance");
     await waitFor(() => expect(text("stories-for")).toContain(VERTICALS.finance.cast.castBrand));
     expect(screen.getAllByTestId(/^story-S\d\d$/)).toHaveLength(9);
-    expect(document.body.textContent).not.toContain(VERTICALS.retail.cast.castBrand);
+    expect(document.body.textContent).not.toContain(VERTICALS.airlines.cast.castBrand);
   });
 
   it("Show it opens the Cache page on that scenario and runs it", async () => {

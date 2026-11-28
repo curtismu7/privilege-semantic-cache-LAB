@@ -35,7 +35,7 @@ export function runChecks(env = process.env) {
     ok: OPEN_QUESTIONS.some((q) => q.id === 'cache-scope-per-user' && q.result === null && q.status === 'open') && !SCENARIOS.some((s) => /user|principal|leak/i.test(s.id)),
     detail: 'the per-user cache scope is an open-question card with no result, and no scenario answers it',
   })));
-  // Stories are data with {{cast}} tokens (rule 10): every token is defined by all three vertical packs, every story names a real scenario and has a talk-track section.
+  // Stories are data with {{cast}} tokens (rule 10): every token is defined by every vertical pack, every story names a real scenario and has a talk-track section.
   checks.push(attempt('stories', () => {
     const talk = loadTalkTrack();
     const scan = scanStories(STORIES, undefined, Object.fromEntries(talk.map((t) => [`talk-track ${t.id}`, t])));

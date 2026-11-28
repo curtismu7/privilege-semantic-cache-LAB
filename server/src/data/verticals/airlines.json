@@ -1,0 +1,12 @@
+{
+  "id": "airlines",
+  "label": "Airlines",
+  "source": "invented example; no customer data",
+  "cast": {
+    "castBrand": "AirGuard Airlines",
+    "castApp": "the passenger-chat assistant",
+    "castTask": "summarising the open rebooking cases for the week",
+    "castKey": "passenger-chat-key",
+    "castOwner": "the guest services platform team"
+  }
+}

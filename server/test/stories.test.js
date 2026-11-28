@@ -7,8 +7,8 @@ import { validateConfig, castForVertical, loadCustomerConfig, publicConfig } fro
 import { SCENARIOS, runScenario } from '../src/scenarios.js';
 import { startLab } from './helpers.js';
 
-test('three vertical packs define the same cast keys, all plain text', () => {
-  assert.deepEqual(Object.keys(VERTICALS).sort(), ['finance', 'health', 'retail']);
+test('four vertical packs define the same cast keys, all plain text', () => {
+  assert.deepEqual(Object.keys(VERTICALS).sort(), ['airlines', 'finance', 'health', 'retail']);
   for (const v of Object.values(VERTICALS)) {
     assert.deepEqual(Object.keys(v.cast).sort(), [...CAST_KEYS].sort(), v.id);
     for (const [k, t] of Object.entries(v.cast)) assert.ok(typeof t === 'string' && t.length > 0 && !/[<>{}]|:\/\//.test(t), `${v.id}.${k}`);
@@ -24,9 +24,9 @@ test('every token a story or a talk-track section uses is defined by every verti
 
 test('the check does fail on an undefined token and an unfilled one is left visible', () => {
   const bad = scanStories([{ id: 'S99', title: 'x {{castNope}}' }], VERTICALS);
-  assert.match(bad.missing.join(), /S99 uses \{\{castNope\}\} which retail lacks/);
+  assert.match(bad.missing.join(), /S99 uses \{\{castNope\}\} which airlines lacks/);
   assert.deepEqual([...tokensIn({ a: ['{{ castBrand }}', { b: '{{castKey}}' }] })].sort(), ['castBrand', 'castKey']);
-  assert.deepEqual(unfilled({ a: '{{castBrand}} {{nope}}' }, castFor('retail')), ['nope']);
+  assert.deepEqual(unfilled({ a: '{{castBrand}} {{nope}}' }, castFor('airlines')), ['nope']);
 });
 
 test('nine stories, one per scenario, each with its own talk-track section; the story names a scenario that passes its expectation', () => {
@@ -61,13 +61,13 @@ test('customer.config (rule 12): bad fields fall back to defaults with a warning
   assert.equal(ok.config.name, 'Acme Test'); assert.equal(ok.config.cast.castBrand, 'Acme Test'); assert.equal(ok.config.cast.castKey, 'acme-key'); assert.deepEqual(ok.warnings, []);
   const bad = validateConfig({ name: '<script>', vertical: 'mining', cast: { keyName: 'Bad Key!', app: 'see https://evil.example', extra: 'x' }, other: 1 });
   assert.equal(bad.config.name, 'Privilege Semantic Cache LAB');
-  assert.equal(bad.config.vertical, 'retail');
+  assert.equal(bad.config.vertical, 'airlines');
   assert.ok(bad.warnings.length >= 5, bad.warnings.join('; '));
-  assert.deepEqual(validateConfig('nope').config.vertical, 'retail');
+  assert.deepEqual(validateConfig('nope').config.vertical, 'airlines');
   assert.match(loadCustomerConfig({ file: '/nonexistent/customer.config.json', env: {} }).config.name, /Semantic Cache LAB/);
   assert.equal(castForVertical(ok, 'finance').vertical, 'finance');
   assert.equal(castForVertical(ok, 'nope'), null);
-  assert.equal(publicConfig(ok).verticals.length, 3);
+  assert.equal(publicConfig(ok).verticals.length, 4);
 });
 
 test('GET /api/story: the vertical picker, the configured brand on its own vertical, a 400 for an unknown vertical', async () => {
@@ -76,7 +76,7 @@ test('GET /api/story: the vertical picker, the configured brand on its own verti
   try {
     const mine = (await lab.get('/api/story')).json;
     assert.equal(mine.vertical, 'health'); assert.equal(mine.cast.castBrand, 'Test Brand Co');
-    assert.equal(mine.stories.length, 9); assert.equal(mine.verticals.length, 3);
+    assert.equal(mine.stories.length, 9); assert.equal(mine.verticals.length, 4);
     assert.ok(mine.talkTrack.every((t) => t.id && t.title && t.say));
     const other = (await lab.get('/api/story?vertical=finance')).json;
     assert.equal(other.cast.castBrand, VERTICALS.finance.cast.castBrand, 'another pack never carries the customer\'s brand');

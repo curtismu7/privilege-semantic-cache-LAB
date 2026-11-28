@@ -104,7 +104,7 @@ describe("shell: banner, mode toggle, presenter, talk track, reset", () => {
     const user = await h.mount();
     await user.click(screen.getByTestId("talk-track-toggle"));
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getAllByText(/Northwind Retail/).length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByText(/AirGuard Airlines/).length).toBeGreaterThan(0);
     expect(dialog.textContent).toMatch(/A paraphrase above the strictness is a hit, and the score is shown/);
     expect(dialog.textContent).not.toMatch(/\{\{/);
   });

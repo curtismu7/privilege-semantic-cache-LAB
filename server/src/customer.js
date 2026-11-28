@@ -2,7 +2,7 @@
 // customer.config.json beside package.json (or the file named by CUSTOMER_CONFIG) is read once at start. It is optional and
 // git-ignored: a real customer's name never goes in the repo. Every field is validated; a bad one falls back to its default and the
 // reason is reported in `warnings`, never thrown.
-//   { "name": "...", "tagline": "...", "vertical": "retail|health|finance",
+//   { "name": "...", "tagline": "...", "vertical": "airlines|retail|health|finance",
 //     "cast": { "brand", "app", "task", "keyName", "owner" } }
 // `cast` is the vocabulary: it renames the people and things the stories and the talk track talk about ({{castBrand}} and so on).
 import fs from 'node:fs';
@@ -90,7 +90,7 @@ export function loadCustomerConfig({ file, env = process.env } = {}) {
 // What the browser may know: branding, the vertical and the filled cast. Nothing else.
 export const publicConfig = ({ config, warnings }) => ({ name: config.name, tagline: config.tagline, vertical: config.vertical, verticals: Object.values(VERTICALS).map((v) => ({ id: v.id, label: v.label })), cast: config.cast, warnings });
 
-// The vertical picker (rule 10): the page may ask for stories and the talk track in any of the three packs. The configured vertical keeps the
+// The vertical picker (rule 10): the page may ask for stories and the talk track in any of the packs. The configured vertical keeps the
 // customer's own words (their brand and approver); another pack is shown as the pack, never with a customer's name on a different industry.
 // -> { vertical, cast } or null for a vertical this lab does not have.
 export function castForVertical({ config }, wanted) {
