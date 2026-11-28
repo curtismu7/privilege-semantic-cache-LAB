@@ -15,12 +15,14 @@ export function useLabHarness() {
   const ctx = { lab: null };
   beforeEach(() => { try { window.localStorage.clear(); window.sessionStorage.clear(); } catch { /* ignore */ } window.location.hash = ""; setJsonView("raw"); });
   afterEach(async () => { cleanup(); if (ctx.lab) { await ctx.lab.stop(); ctx.lab = null; } });
-  ctx.mount = async ({ page, ...opts } = {}) => {
+  // The Real-or-mock modal opens on every fresh session; a test that is not about it starts with both modes already dismissed (modal: true keeps it).
+  ctx.mount = async ({ page, modal = false, ...opts } = {}) => {
     ctx.lab = await startLab(opts);
+    if (!modal) { try { window.sessionStorage.setItem("psc-mode-seen-mock", "1"); window.sessionStorage.setItem("psc-mode-seen-real", "1"); } catch { /* ignore */ } }
     if (page) window.location.hash = `#${page}`;
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByTestId("banner");
+    await screen.findByRole("navigation", { name: "Lab sections" });
     await waitFor(() => { if (!document.querySelector("[data-testid='mode']")) throw new Error("not loaded"); });
     return user;
   };

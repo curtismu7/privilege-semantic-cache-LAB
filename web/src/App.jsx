@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import TopMenu, { applyFontSize } from "./top-menu/TopMenu.jsx";
 import TalkTrackDialog from "./talk-track/TalkTrackDialog.jsx";
 import AboutDialog from "./about/AboutDialog.jsx";
+import ModeModal from "./mode-modal/ModeModal.jsx";
 import ModeToggle from "./components/ModeToggle.jsx";
 import PresenterSay from "./components/PresenterSay.jsx";
 import useLab from "./hooks/useLab";
@@ -18,8 +19,11 @@ export const PAGES = [
   { id: "stories", label: "Stories and talk track", View: StoriesPage },
   { id: "limits", label: "Limits (UNVERIFIED)", View: LimitsPage },
 ];
-// Shown until the server's own banner has loaded: never blank, and never claiming more than it knows.
-export const BANNER_UNKNOWN = "SIMULATED. A mock gateway, a stand-in encoder (NOT a real embedding model), a vector store stand-in, a mock model and a lab clock; nothing leaves this machine. Everything beyond the 2026-11-21 release notes is this lab's own model and UNVERIFIED.";
+// The Real-or-mock modal's lines (it replaces the old simulation banner). The server still sends its own `banner` in /api/info (server tests and the doctor pin it); the page no longer reads it.
+export const MODE_LINES = {
+  mock: "Everything here is simulated: a mock gateway, a stand-in encoder that is NOT a real embedding model, a vector store stand-in, a mock model and a lab clock, with no network call. Only what the 2026-11-21 release notes say is sourced; everything else is this lab's own model and UNVERIFIED.",
+  real: "Real is one read-only look at a tenant running the 2026-11-21 release, owner-run, and it is not built yet. Everything else on this page stays this lab's own model and UNVERIFIED, and the encoder is still not a real embedding model.",
+};
 // One line per page above the content.
 const PAGE_INTRO = {
   cache: "An LLM key reuses an earlier answer for a similar prompt. Run a scenario or your own prompt: the verdict says HIT or MISS and why, then Usage, how close the score is to the strictness, and what the run left behind.",
@@ -83,7 +87,6 @@ export default function App() {
   };
 
   const { source, story, info } = lab;
-  const banner = info?.banner || BANNER_UNKNOWN;
   const View = PAGES.find((p) => p.id === page).View;
   // The stored run is { kind, id, played, runId, trace }: a scenario run names its scenario in `id`.
   const sc = lab.last?.kind === "scenario" ? story?.stories.find((s) => s.scenario === lab.last.id) : null;
@@ -114,7 +117,6 @@ export default function App() {
         />
       </header>
       <main className="page">
-        <p className="banner" role="note" data-state={source === "real" ? "live" : "mock"} data-testid="banner">{banner}</p>
         {lab.modeError && <p className="field-error" role="alert" data-testid="mode-error-banner">{lab.modeError}</p>}
         {lab.error && (
           <div className="field-error" role="alert" data-testid="load-error">
@@ -134,6 +136,7 @@ export default function App() {
           {lab.error && !story ? null : !story || !info ? <p className="muted" role="status">Loading...</p> : <View key={`${page}-${lab.epoch}`} lab={lab} />}
         </div>
       </main>
+      <ModeModal mode={source} lines={MODE_LINES} storageKey="psc-mode" />
       <AboutDialog isOpen={aboutOpen} onClose={() => setAboutOpen(false)} info={info} version={info?.version ? `v${info.version}` : ""} />
       <TalkTrackDialog isOpen={talkOpen} onClose={() => setTalkOpen(false)} talk={(story?.talkTrack ?? []).map((t) => ({ ...t, title: visible(t.title), say: visible(t.say) }))} />
     </div>

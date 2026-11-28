@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent } from "@testing-library/react";
-import { BANNER } from "../../../server/src/banner.js";
+import { MODE_LINES } from "../App.jsx";
 import { validateConfig } from "../../../server/src/customer.js";
 import { jsonResponse } from "./harness.js";
 import { nav, screen, text, useLabHarness, waitFor, within } from "./util.jsx";
@@ -8,14 +8,21 @@ import { nav, screen, text, useLabHarness, waitFor, within } from "./util.jsx";
 const h = useLabHarness();
 const PAGES = ["Semantic cache", "Diagram", "Stories and talk track", "Limits (UNVERIFIED)"];
 
-describe("shell: banner, mode toggle, presenter, talk track, reset", () => {
-  it("shows the simulation banner FIRST in the page on every page, with the server's own words", async () => {
-    const user = await h.mount();
+describe("shell: mode modal, mode toggle, presenter, talk track, reset", () => {
+  it("opens on the MOCK modal with the lab's own words (encoder not a real embedding model, UNVERIFIED), and no simulation banner is left on any page", async () => {
+    const user = await h.mount({ modal: true });
+    const modal = screen.getByTestId("mode-modal");
+    expect(modal).toHaveAttribute("data-mode", "mock");
+    expect(modal.textContent).toContain(MODE_LINES.mock);
+    expect(modal.textContent).toMatch(/NOT a real embedding model/);
+    expect(modal.textContent).toMatch(/UNVERIFIED/);
+    expect(modal.textContent).toMatch(/2026-11-21 release notes/);
+    await user.click(screen.getByTestId("mode-modal-ok"));
     for (const p of PAGES) {
       await nav(user, p);
-      expect(document.querySelector("main").firstElementChild, p).toBe(screen.getByTestId("banner"));
-      expect(text("banner"), p).toBe(BANNER); // the server's own words
-      expect(text("banner")).toMatch(/UNVERIFIED/);
+      expect(screen.queryByTestId("banner"), p).toBeNull();
+      expect(document.querySelector("main > p.banner"), p).toBeNull();
+      expect(screen.queryByTestId("mode-modal"), p).toBeNull();
     }
   });
 
@@ -80,16 +87,15 @@ describe("shell: banner, mode toggle, presenter, talk track, reset", () => {
   });
 
   it("names a server that is down instead of a blank page, and offers a retry", async () => {
-    await h.mount({ overrides: { "/api/info": () => jsonResponse(502, { error: "bad_gateway", message: "The lab server did not answer." }) } }).catch(() => {});
+    await h.mount({ modal: true, overrides: { "/api/info": () => jsonResponse(502, { error: "bad_gateway", message: "The lab server did not answer." }) } }).catch(() => {});
     expect(await screen.findByTestId("load-error")).toHaveTextContent(/Could not load the lab/);
     expect(screen.getByTestId("retry")).toBeInTheDocument();
-    expect(screen.getByTestId("banner").textContent.length).toBeGreaterThan(40);
+    expect(screen.getByTestId("mode-modal")).toHaveAttribute("data-mode", "mock"); // an unreachable server reads as MOCK, the cautious label
   });
 
-  it("presenter mode keeps the banner first and shows the talk-track line for the page; P toggles and Escape leaves", async () => {
+  it("presenter mode shows the talk-track line for the page; P toggles and Escape leaves", async () => {
     const user = await h.mount();
     await user.click(screen.getByTestId("presenter"));
-    expect(document.querySelector("main").firstElementChild).toBe(screen.getByTestId("banner"));
     expect(screen.getByTestId("presenter-say")).toHaveTextContent(/only claims taken from the 2026-11-21 release notes/);
     fireEvent.keyDown(window, { key: "Escape" });
     await waitFor(() => expect(screen.getByTestId("presenter")).toHaveAttribute("aria-pressed", "false"));
@@ -97,7 +103,6 @@ describe("shell: banner, mode toggle, presenter, talk track, reset", () => {
     expect(screen.getByTestId("presenter")).toHaveAttribute("aria-pressed", "true");
     await nav(user, "Diagram");
     expect(screen.getByTestId("presenter-say")).toHaveTextContent(/Everything is simulated/);
-    expect(screen.getByTestId("banner")).toBeInTheDocument();
   });
 
   it("the talk track dialog opens with every section, filled for the vertical", async () => {
