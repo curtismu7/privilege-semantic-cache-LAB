@@ -74,7 +74,7 @@ test('no stdout line uses a word a shared matcher reads as a decision, and none 
   assert.ok(lines.length > 20);
   for (const l of lines) assert.doesNotMatch(l, FORBIDDEN_WORDS, l);
   for (const l of lines) assert.equal(classify(`2026-11-24T10:00:00.000Z privilege-semantic-cache-lab ${l}`), null, l);
-  assert.equal(lines.some((l) => /photosynthesis|password|invoice/i.test(l)), false);
+  assert.equal(lines.some((l) => /photosynthesis|password|invoice|itinerary/i.test(l)), false);
 });
 
 test('the lab reads no logs: only the collector core is vendored, and the layers carry only simulated rows', () => {

@@ -142,12 +142,12 @@ export const SCENARIOS = [
       },
     },
     steps: [
-      { do: 'run', key: 'a', prompt: 'Show me my latest invoice' },
-      { do: 'run', key: 'b', prompt: 'Show me my latest invoice' },
-      { do: 'run', key: 'c', prompt: 'Show me my latest invoice' },
-      { do: 'run', key: 'a', prompt: 'Show me my latest invoice' },
-      { do: 'run', key: 'b', prompt: 'Show me my latest invoice' },
-      { do: 'run', key: 'c', prompt: 'Show me my latest invoice' },
+      { do: 'run', key: 'a', prompt: 'Show me my latest itinerary' },
+      { do: 'run', key: 'b', prompt: 'Show me my latest itinerary' },
+      { do: 'run', key: 'c', prompt: 'Show me my latest itinerary' },
+      { do: 'run', key: 'a', prompt: 'Show me my latest itinerary' },
+      { do: 'run', key: 'b', prompt: 'Show me my latest itinerary' },
+      { do: 'run', key: 'c', prompt: 'Show me my latest itinerary' },
     ],
     expect: [
       { path: 'steps.1.outcome', op: 'eq', value: 'miss' },

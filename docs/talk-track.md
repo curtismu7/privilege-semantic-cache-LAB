@@ -1,7 +1,7 @@
 # Talk track
 
-<!-- The source for the Talk track view and the presenter mode. Written once with {{castBrand}}-style tokens; the three vertical packs
-     (retail, health, finance) and customer.config.json fill them. A test fails on a token no pack defines. A heading that starts with
+<!-- The source for the Talk track view and the presenter mode. Written once with {{castBrand}}-style tokens; the four vertical packs
+     (airlines, retail, health, finance) and customer.config.json fill them. A test fails on a token no pack defines. A heading that starts with
      "S01:" to "S09:" belongs to the story of the same number. Keep every section short enough to say in a minute. -->
 
 ## Before you start
